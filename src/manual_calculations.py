@@ -74,7 +74,10 @@ def select_patch(gray: np.ndarray) -> tuple[int, int]:
 
 
 def correlate_valid(patch: np.ndarray, kernel: np.ndarray) -> np.ndarray:
-    """Slide the kernel by hand over every valid position and sum the products."""
+    """Correlate explicitly: step the kernel over every valid position and sum the nine products.
+
+    Written as nested loops rather than cv2.filter2D, which is the function being checked.
+    """
     output = np.zeros((VALID_SIZE, VALID_SIZE))
     for i in range(VALID_SIZE):
         for j in range(VALID_SIZE):
@@ -219,7 +222,7 @@ def add_magnitude_examples(gx: np.ndarray, gy: np.ndarray, opencv: np.ndarray) -
 
 
 def grayscale_pixels(image: np.ndarray) -> None:
-    """Apply I_gray = round(0.114B + 0.587G + 0.299R) by hand to five spread-out pixels."""
+    """Evaluate I_gray = round(0.114B + 0.587G + 0.299R) directly for five spread-out pixels."""
     opencv_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     rows = []
     for row, col in SAMPLE_PIXELS:
@@ -257,7 +260,7 @@ def grayscale_pixels(image: np.ndarray) -> None:
             "has_kernel": False,
         }
     )
-    print(f"op01_grayscale: wrote {len(frame)} manually converted pixels")
+    print(f"op01_grayscale: wrote {len(frame)} independently converted pixels")
 
 
 def main() -> None:

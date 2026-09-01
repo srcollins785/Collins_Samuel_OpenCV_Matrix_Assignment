@@ -124,7 +124,7 @@ I_gray = round(0.114 * B + 0.587 * G + 0.299 * R)
 
 with the channels taken in BGR order as loaded by `cv2.imread`. The weights sum to 1.0, so the result stays within the original 0-255 range.
 
-The equation was applied by hand to 5 pixels taken from different locations in the image and compared against the value OpenCV produced.
+The equation was evaluated independently for 5 pixels taken from different locations in the image and compared against the value OpenCV produced. The calculation is performed in `src/manual_calculations.py`, function `grayscale_pixels()`, which multiplies out the three weights directly rather than calling `cv2.cvtColor`.
 
 |   row |   column |   B |   G |   R |   manual_gray |   opencv_gray |   difference |
 |------:|---------:|----:|----:|----:|--------------:|--------------:|-------------:|
@@ -134,7 +134,7 @@ The equation was applied by hand to 5 pixels taken from different locations in t
 |   150 |       50 | 114 | 130 | 133 |           129 |           129 |            0 |
 |   199 |      199 | 147 | 160 | 162 |           159 |           159 |            0 |
 
-Every manually calculated value matches OpenCV exactly, confirming the weighted equation is the operation OpenCV performs.
+Every independently calculated value matches OpenCV exactly, confirming the weighted equation is the operation OpenCV performs.
 
 ## 4. OpenCV Operations
 
@@ -758,7 +758,20 @@ The full table is saved as `csv_full_image/contour_measurements.csv`. The ten la
 
 ## 5. Manual Matrix Calculations
 
-Manual calculation is performed on a single 7 x 7 grayscale patch rather than the full 200 x 200 image. Every manual result below was produced by explicit arithmetic on the pixel values: point operations were evaluated element by element, and neighborhood operations were evaluated by sliding the kernel by hand and summing the products. No manual result was produced by calling the OpenCV function it is compared against.
+Manual calculation is performed on a single 7 x 7 grayscale patch rather than the full 200 x 200 image. In this project *manual* means the result is derived directly from the defining equation using ordinary arithmetic, without calling the OpenCV function being checked. Point operations are evaluated element by element, and neighborhood operations are evaluated by stepping the kernel across the patch and summing the nine products explicitly.
+
+**Where each calculation lives.** All manual results are produced by `src/manual_calculations.py`:
+
+| Operations | Function | What it does instead of calling OpenCV |
+| --- | --- | --- |
+| op01 grayscale | `grayscale_pixels()` | Multiplies the three BGR weights out directly instead of `cv2.cvtColor` |
+| op02-op06 point operations | `main()` | NumPy element arithmetic and slicing instead of `cv2.bitwise_not`, `cv2.add`, `cv2.convertScaleAbs`, `cv2.threshold`, `cv2.flip` |
+| op07, op08, op10, op11 kernels | `correlate_valid()` | Nested loops summing nine weighted products instead of `cv2.filter2D` or `cv2.Sobel` |
+| op09, op13, op14 rank filters | `rank_valid()` | Sorts the nine neighborhood values and selects the middle, minimum, or maximum instead of `cv2.medianBlur`, `cv2.erode`, `cv2.dilate` |
+| op12 magnitude | `main()` | `sqrt(Gx^2 + Gy^2)` applied to the manual Gx and Gy matrices |
+| Worked examples | `add_examples()`, `add_magnitude_examples()` | Records the substituted values and arithmetic shown for three cells per operation |
+
+Comparison is deliberately kept in a separate program, `src/verify_matrices.py`, which reloads the saved matrices from disk rather than recomputing anything.
 
 For every 3 x 3 neighborhood operation only the central 5 x 5 output is compared. Those 25 output pixels depend solely on values inside the patch, so OpenCV's border-padding rules cannot influence the comparison.
 
@@ -1972,6 +1985,6 @@ This is covered quantitatively in section 4.2. In summary, nearest neighbor copi
 
 The central lesson is that a digital image is a numerical matrix, and that every OpenCV function is a specific, reproducible piece of arithmetic on that matrix. Nothing in this assignment required trusting OpenCV as a black box: each of the fourteen verified operations was reproduced from its defining equation using only indexing, multiplication, addition, sorting, and square roots, and every one matched the library output in 100 percent of cells.
 
-Working through the operations by hand made the structure behind them visible. Grayscale conversion is a weighted sum whose coefficients encode human visual sensitivity. Spatial filtering is correlation with a kernel, and the kernel weights alone determine whether the result is a blur, an edge detector, or a sharpener. Rank filters such as the median and the morphological operators are not convolutions at all but selections from a sorted neighborhood, which is precisely why they behave so differently at edges and in the presence of outliers.
+Reimplementing the operations from their defining equations made the structure behind them visible. Grayscale conversion is a weighted sum whose coefficients encode human visual sensitivity. Spatial filtering is correlation with a kernel, and the kernel weights alone determine whether the result is a blur, an edge detector, or a sharpener. Rank filters such as the median and the morphological operators are not convolutions at all but selections from a sorted neighborhood, which is precisely why they behave so differently at edges and in the presence of outliers.
 
 Equally important was learning where the mathematics meets implementation reality. The differences that did arise during development came not from the equations but from representation: rounding versus truncation, signed versus unsigned storage, clipping at the ends of the range, and the invented values at image borders. Reproducing a library function correctly means matching its numerical conventions as well as its formula.

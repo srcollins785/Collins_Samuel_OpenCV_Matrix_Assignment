@@ -233,9 +233,30 @@ contains strong intensity variation. It is saved as
 `csv_manual_calculations/manual_input_patch_7x7.csv`.
 
 For 3 × 3 neighborhood operations only the central 5 × 5 output is compared, so OpenCV's
-border-padding rules cannot influence the result. Manual results are computed with explicit
-arithmetic — indexing, loops, multiplication, sorting — and never by calling the OpenCV function
-being checked.
+border-padding rules cannot influence the result.
+
+### What "Manual" Means Here
+
+*Manual* means each result is derived directly from the defining equation using ordinary
+arithmetic — indexing, multiplication, addition, sorting, square roots — without calling the OpenCV
+function being checked. Using the same library call for both sides would make the verification
+circular. The report additionally shows three fully substituted numerical calculations per
+neighborhood operation, which can be checked with a calculator.
+
+All manual results are produced by [src/manual_calculations.py](src/manual_calculations.py):
+
+| Operations | Function | What it does instead of calling OpenCV |
+| --- | --- | --- |
+| op01 grayscale | `grayscale_pixels()` | Multiplies the three BGR weights out directly instead of `cv2.cvtColor` |
+| op02–op06 point operations | `main()` | NumPy element arithmetic and slicing instead of `cv2.bitwise_not`, `cv2.add`, `cv2.convertScaleAbs`, `cv2.threshold`, `cv2.flip` |
+| op07, op08, op10, op11 kernel operations | `correlate_valid()` | Nested loops summing nine weighted products instead of `cv2.filter2D` or `cv2.Sobel` |
+| op09, op13, op14 rank filters | `rank_valid()` | Sorts the nine neighborhood values and selects the middle, minimum, or maximum instead of `cv2.medianBlur`, `cv2.erode`, `cv2.dilate` |
+| op12 gradient magnitude | `main()` | `sqrt(Gx² + Gy²)` applied to the manual Gx and Gy matrices |
+| Worked examples | `add_examples()`, `add_magnitude_examples()` | Records the substituted values and arithmetic for three cells per operation |
+
+Comparison is deliberately kept in a separate program,
+[src/verify_matrices.py](src/verify_matrices.py), which reloads the saved matrices from disk rather
+than recomputing anything.
 
 The mean filter follows the required structure, with actual patch values substituted:
 
