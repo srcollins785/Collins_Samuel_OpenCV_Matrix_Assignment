@@ -1,0 +1,4 @@
+stage,file,width,height,channels,aspect_ratio
+1. Original mobile-camera photograph,image_original_not_cropped.jpg,2316,3088,3,0.75
+2. Cropped square image,image_original.jpg,2316,2316,3,1.0
+3. Final working image,image_200x200.png,200,200,3,1.0

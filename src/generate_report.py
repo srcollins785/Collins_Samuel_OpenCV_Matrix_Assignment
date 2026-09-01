@@ -141,16 +141,29 @@ def matrix_table(csv_path: Path, size: int | None = None) -> str:
 def section_metadata() -> list[str]:
     lines = ["## 2. Image Acquisition and Preparation", ""]
     lines.append(
-        "The source photograph was captured with a mobile phone and stored as "
-        "`input/image_original.jpg`, then resized to 200 x 200 pixels with "
-        "`cv2.resize` using `INTER_AREA` interpolation and saved as "
-        "`input/image_200x200.png`."
+        "The photograph was captured with a mobile phone, cropped to a square, and then resized "
+        "to 200 x 200 pixels with `cv2.resize` using `INTER_AREA` interpolation. Cropping before "
+        "resizing matters: the camera produces a 4:3 frame, and resizing that directly to a square "
+        "would compress the image horizontally and distort every measurement taken from it. "
+        "`prepare_image.py` verifies that its input is square and refuses to continue otherwise."
     )
     lines.append("")
-    resized = INPUT_DIR / "image_200x200.png"
-    if resized.exists():
-        lines.append(f"![Prepared 200x200 image](../input/{resized.name})")
+
+    stages = FULL_CSV / "source_image_stages.csv"
+    if stages.exists():
+        lines.append(pd.read_csv(stages).to_markdown(index=False))
         lines.append("")
+
+    for caption, filename in [
+        ("Original mobile-camera photograph", "image_original_not_cropped.jpg"),
+        ("Cropped square image", "image_original.jpg"),
+        ("Final 200 x 200 working image", "image_200x200.png"),
+    ]:
+        if (INPUT_DIR / filename).exists():
+            lines.append(f"**{caption}** (`input/{filename}`)")
+            lines.append("")
+            lines.append(f"![{caption}](../input/{filename})")
+            lines.append("")
 
     lines.append("### Image Properties")
     lines.append("")

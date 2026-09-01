@@ -84,6 +84,7 @@ Collins_Samuel_OpenCV_Matrix_Assignment/
 │   ├── build_report_pdf.py
 │   └── run_all.py
 ├── input/
+│   ├── image_original_not_cropped.jpg
 │   ├── image_original.jpg
 │   └── image_200x200.png
 ├── output_images/
@@ -97,7 +98,7 @@ Collins_Samuel_OpenCV_Matrix_Assignment/
 | --- | --- |
 | `report/` | The generated technical report in Markdown and its PDF export |
 | `src/` | All Python source. Each stage is a separate module built from functions |
-| `input/` | The original mobile-camera photograph and the prepared 200 × 200 working image |
+| `input/` | The original mobile-camera photograph, the square crop, and the prepared 200 × 200 working image |
 | `output_images/` | One PNG per operation, plus the two histogram plots and the contour overlay |
 | `csv_full_image/` | Full 200 × 200 pixel matrices for every channel and every operation, image metadata, histogram counts, interpolation comparison, and contour measurements |
 | `csv_manual_calculations/` | The selected 7 × 7 patch and, for each manual operation, the input, kernel, manual output, OpenCV output, and difference matrices, plus worked examples and verification statistics |
@@ -106,9 +107,14 @@ Collins_Samuel_OpenCV_Matrix_Assignment/
 
 | Stage | File | Size |
 | --- | --- | --- |
-| Original mobile-camera photograph | `input/image_original.jpg` | 2316 × 2316 |
-| Cropped square image | Same file — the photo was captured and cropped square on the phone, so no further cropping was needed. `prepare_image.py` verifies squareness and refuses to continue otherwise | 2316 × 2316 |
-| Final working image | `input/image_200x200.png` | 200 × 200 |
+| Original mobile-camera photograph | `input/image_original_not_cropped.jpg` | 2316 × 3088 (3:4) |
+| Cropped square image | `input/image_original.jpg` | 2316 × 2316 (1:1) |
+| Final working image | `input/image_200x200.png` | 200 × 200 (1:1) |
+
+Cropping before resizing matters. The camera produces a 3:4 frame, and resizing that directly to a
+square would compress the image vertically and distort every measurement taken from it.
+`prepare_image.py` verifies its input is square and refuses to continue otherwise. The stage
+dimensions are also recorded in `csv_full_image/source_image_stages.csv`.
 
 Shape `(200, 200, 3)`, data type `uint8`, values 0–255.
 

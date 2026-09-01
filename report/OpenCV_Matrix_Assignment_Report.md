@@ -15,9 +15,25 @@ This report demonstrates that a digital image is a numerical matrix rather than 
 
 ## 2. Image Acquisition and Preparation
 
-The source photograph was captured with a mobile phone and stored as `input/image_original.jpg`, then resized to 200 x 200 pixels with `cv2.resize` using `INTER_AREA` interpolation and saved as `input/image_200x200.png`.
+The photograph was captured with a mobile phone, cropped to a square, and then resized to 200 x 200 pixels with `cv2.resize` using `INTER_AREA` interpolation. Cropping before resizing matters: the camera produces a 4:3 frame, and resizing that directly to a square would compress the image horizontally and distort every measurement taken from it. `prepare_image.py` verifies that its input is square and refuses to continue otherwise.
 
-![Prepared 200x200 image](../input/image_200x200.png)
+| stage                                | file                           |   width |   height |   channels |   aspect_ratio |
+|:-------------------------------------|:-------------------------------|--------:|---------:|-----------:|---------------:|
+| 1. Original mobile-camera photograph | image_original_not_cropped.jpg |    2316 |     3088 |          3 |           0.75 |
+| 2. Cropped square image              | image_original.jpg             |    2316 |     2316 |          3 |           1    |
+| 3. Final working image               | image_200x200.png              |     200 |      200 |          3 |           1    |
+
+**Original mobile-camera photograph** (`input/image_original_not_cropped.jpg`)
+
+![Original mobile-camera photograph](../input/image_original_not_cropped.jpg)
+
+**Cropped square image** (`input/image_original.jpg`)
+
+![Cropped square image](../input/image_original.jpg)
+
+**Final 200 x 200 working image** (`input/image_200x200.png`)
+
+![Final 200 x 200 working image](../input/image_200x200.png)
 
 ### Image Properties
 
