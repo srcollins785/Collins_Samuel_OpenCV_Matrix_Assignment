@@ -1,6 +1,9 @@
 # OpenCV Matrix Assignment Report
 
-**Student:** Samuel Collins  
+**Samuel Collins**  
+Ph.D. Student, Department of Cyber-Physical Systems  
+Clark Atlanta University  
+samuel.collins@students.cau.edu  
 **Date:** 2026-08-31
 
 ## 1. Objective

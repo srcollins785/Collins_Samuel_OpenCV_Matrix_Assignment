@@ -14,6 +14,9 @@ INPUT_DIR = ROOT / "input"
 REPORT_MD = ROOT / "report" / "OpenCV_Matrix_Assignment_Report.md"
 
 STUDENT_NAME = "Samuel Collins"
+STUDENT_TITLE = "Ph.D. Student, Department of Cyber-Physical Systems"
+INSTITUTION = "Clark Atlanta University"
+STUDENT_EMAIL = "samuel.collins@students.cau.edu"
 PREVIEW = 8  # corner size, in pixels, shown for full 200x200 matrices
 
 OPERATION_GROUPS = [
@@ -499,7 +502,10 @@ def build() -> str:
     lines = [
         "# OpenCV Matrix Assignment Report",
         "",
-        f"**Student:** {STUDENT_NAME}  ",
+        f"**{STUDENT_NAME}**  ",
+        f"{STUDENT_TITLE}  ",
+        f"{INSTITUTION}  ",
+        f"{STUDENT_EMAIL}  ",
         f"**Date:** {date.today().isoformat()}",
         "",
         "## 1. Objective",
