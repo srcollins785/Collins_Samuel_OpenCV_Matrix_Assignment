@@ -24,6 +24,48 @@ PREVIEW = 8  # corner size, in pixels, shown for full 200x200 matrices
 # Section 7 is a first-person reflection. Write it here in your own words; while this is
 # empty the report prints a visible placeholder instead.
 REFLECTION_TEXT = """
+The clearest thing this assignment taught me is that an image is not a picture that happens to be
+stored as numbers. It is a matrix, and every OpenCV call is a specific piece of arithmetic performed
+on that matrix. I did not have to take that on faith. Fourteen operations were reproduced from their
+defining equations using nothing but indexing, multiplication, addition, sorting, and square roots,
+and all fourteen matched the library output in 100 percent of cells. Once I had seen a Sobel kernel
+produce the same numbers as `cv2.Sobel`, the function stopped feeling like a black box and started
+feeling like notation for something I could write myself.
+
+Working through the kernels changed how I think about what a filter is. The mean and Gaussian
+filters differ only in nine weights, yet one blurs noticeably harder than the other, and the same
+convolution machinery with a different set of nine numbers stops blurring altogether and starts
+detecting edges. The kernel is not a setting attached to a filter; the kernel *is* the filter. That
+reframing also made the rank filters stand out, because the median and the morphological operators
+are not convolutions at all. They sort the neighborhood and pick a value out of it, which is a
+fundamentally different kind of operation even though it uses the same 3 x 3 window.
+
+The result that surprised me most came from the noise experiment. I expected the median filter to be
+the best of the three, and on salt-and-pepper noise it was, removing 71 percent of the error. What I
+did not expect was that the mean and Gaussian filters would make that same noise measurably *worse*,
+increasing the mean absolute error by 20 and 14 percent. Averaging takes one corrupted pixel and
+smears it across nine, so the error stops being concentrated and starts being everywhere. Then the
+ordering reversed completely on Gaussian noise, where the two averaging filters beat the median. The
+lesson is that there is no generally best filter, only a filter matched to a particular kind of
+corruption, and I would not have arrived at that by reading the formulas alone.
+
+Measuring rather than assuming corrected me a second time. When I asked which operation produced the
+largest visual change, my instinct was thresholding, since it throws away 254 of 256 intensity
+levels. The measurement put Canny first at 152.6 mean absolute change and thresholding only
+mid-table at 64.3. Both answers turn out to be defensible, but they answer different questions:
+Canny moves pixel values the furthest because it drives almost everything to black, while
+thresholding destroys the most information while leaving the surviving values numerically close to
+where they started. Numerical distance and information loss are not the same thing, and I would have
+conflated them if I had trusted my first impression.
+
+Finally, almost every discrepancy I ran into during this project came from implementation details
+rather than from the mathematics. The equations were never the hard part. What actually caused
+problems was rounding versus truncation when converting back to 8 bits, negative gradient values
+being silently clipped to zero by an unsigned type, clipping at the ends of the range making
+brightness and contrast irreversible, and OpenCV inventing border pixels that my manual calculation
+had no equivalent for. That last one is why the verification compares only the central 5 x 5 of the
+patch. Reproducing a library function correctly means matching its numerical conventions, not just
+its formula, and that is the part I will be watching for next time.
 """
 
 OPERATION_GROUPS = [
