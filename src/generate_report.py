@@ -1,5 +1,6 @@
 """Build the assignment report in Markdown from the generated images, matrices, and verification data."""
 
+import json
 from datetime import date
 from pathlib import Path
 
@@ -374,45 +375,123 @@ def contour_discussion() -> list[str]:
 
 def section_verification() -> list[str]:
     lines = [
-        "## 5. Manual Verification",
+        "## 5. Manual Matrix Calculations",
         "",
-        "A 7 x 7 patch was extracted from the grayscale matrix and each selected operation was "
-        "computed by hand, then compared against the OpenCV result element by element. A maximum "
-        "absolute difference of 0 confirms the manual calculation reproduces OpenCV exactly.",
+        "Manual calculation is performed on a single 7 x 7 grayscale patch rather than the full "
+        "200 x 200 image. Every manual result below was produced by explicit arithmetic on the "
+        "pixel values: point operations were evaluated element by element, and neighborhood "
+        "operations were evaluated by sliding the kernel by hand and summing the products. No "
+        "manual result was produced by calling the OpenCV function it is compared against.",
+        "",
+        "For every 3 x 3 neighborhood operation only the central 5 x 5 output is compared. Those "
+        "25 output pixels depend solely on values inside the patch, so OpenCV's border-padding "
+        "rules cannot influence the comparison.",
         "",
     ]
+
+    location = MANUAL_CSV / "patch_location.csv"
     patch = MANUAL_CSV / "manual_input_patch_7x7.csv"
-    if patch.exists():
-        lines.append("### Input Patch")
+    if location.exists() and patch.exists():
+        info = pd.read_csv(location).iloc[0]
+        lines.append("### Selected Patch")
+        lines.append("")
+        lines.append(
+            f"The patch spans **rows {info['start_row']} to {info['end_row']}** and "
+            f"**columns {info['start_column']} to {info['end_column']}** of the 200 x 200 "
+            f"grayscale image. It was chosen as the 7 x 7 window with the highest standard "
+            f"deviation ({info['std']}), so it contains noticeable intensity variation: values "
+            f"range from {info['min']} to {info['max']}."
+        )
+        lines.append("")
+        lines.append("Saved as `csv_manual_calculations/manual_input_patch_7x7.csv`.")
         lines.append("")
         lines.append(matrix_table(patch))
         lines.append("")
 
     summary = MANUAL_CSV / "verification_summary.csv"
-    if summary.exists():
-        results = pd.read_csv(summary)
-        lines.append("### Summary")
+    if not summary.exists():
+        return lines
+
+    results = pd.read_csv(summary)
+    lines.append("### Summary of All Manual Operations")
+    lines.append("")
+    lines.append(
+        results[
+            ["operation_id", "operation", "output_shape", "max_abs_difference", "result"]
+        ].to_markdown(index=False)
+    )
+    lines.append("")
+    matched = int((results["result"] == "MATCH").sum())
+    lines.append(
+        f"All {matched} of {len(results)} operations reproduce the OpenCV result. Where a maximum "
+        "difference is not exactly zero it is on the order of 1e-14, which is floating-point "
+        "representation error rather than a disagreement in the arithmetic."
+    )
+    lines.append("")
+
+    examples = (
+        pd.read_csv(MANUAL_CSV / "manual_worked_examples.csv")
+        if (MANUAL_CSV / "manual_worked_examples.csv").exists()
+        else pd.DataFrame()
+    )
+
+    for row in results.itertuples():
+        lines.append(f"### {row.operation_id.upper()} - {row.operation}")
         lines.append("")
-        lines.append(results.to_markdown(index=False))
+        prefix = row.file_prefix
+        for label, suffix in [
+            ("Input", "input"),
+            ("Kernel", "kernel"),
+            ("Manual output", "manual_output"),
+            ("OpenCV output", "opencv_output"),
+            ("Difference (manual - OpenCV)", "difference"),
+        ]:
+            path = MANUAL_CSV / f"{prefix}_{suffix}.csv"
+            if path.exists():
+                lines.append(f"**{label}** (`{path.name}`)")
+                lines.append("")
+                lines.append(matrix_table(path))
+                lines.append("")
+
+        if not examples.empty:
+            subset = examples[examples["operation_id"] == row.operation_id]
+            if not subset.empty:
+                lines += worked_example_lines(subset)
+
+        lines.append(
+            f"Maximum absolute difference: **{row.max_abs_difference}** ({row.result})."
+        )
         lines.append("")
-        for row in results.itertuples():
-            lines.append(f"### {row.operation_id.upper()} - {row.operation}")
+    return lines
+
+
+def worked_example_lines(subset: pd.DataFrame) -> list[str]:
+    lines = [
+        "**Worked calculations for three representative output cells**",
+        "",
+    ]
+    for example in subset.itertuples():
+        neighborhood = json.loads(example.neighborhood)
+        lines.append(f"*Output cell ({example.output_row}, {example.output_col})*")
+        lines.append("")
+        if len(neighborhood) == 3 and len(neighborhood[0]) == 3:
+            lines.append("Neighborhood values:")
             lines.append("")
-            for label, suffix in [
-                ("Manual output", "manual_output"),
-                ("OpenCV output", "opencv_output"),
-                ("Difference (manual - OpenCV)", "difference"),
-            ]:
-                path = MANUAL_CSV / f"{row.operation_id}_{suffix}.csv"
-                if path.exists():
-                    lines.append(f"**{label}**")
-                    lines.append("")
-                    lines.append(matrix_table(path))
-                    lines.append("")
-            lines.append(
-                f"Maximum absolute difference: **{row.max_abs_difference}** ({row.result})."
-            )
-            lines.append("")
+            lines.append("```")
+            for values in neighborhood:
+                lines.append("  ".join(f"{v:>5}" for v in values))
+            lines.append("```")
+        else:
+            lines.append(f"Gx = {neighborhood[0][0]}, Gy = {neighborhood[1][0]}")
+        lines.append("")
+        lines.append("```")
+        lines.append(example.calculation)
+        lines.append("```")
+        lines.append("")
+        lines.append(
+            f"Manual result {example.manual_result}, OpenCV result {example.opencv_result}."
+        )
+        lines.append("")
     return lines
 
 

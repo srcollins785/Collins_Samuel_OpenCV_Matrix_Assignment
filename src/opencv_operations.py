@@ -108,7 +108,7 @@ def color_and_intensity(image: np.ndarray, gray: np.ndarray) -> np.ndarray:
 
     save_result(cv2.bitwise_not(gray), "negative")
     save_result(np.clip(gray.astype(np.int16) + 40, 0, 255).astype(np.uint8), "brightness_plus40")
-    save_result(np.clip(gray.astype(np.float32) * 1.25, 0, 255).astype(np.uint8), "contrast_1_25")
+    save_result(cv2.convertScaleAbs(gray, alpha=1.25, beta=0), "contrast_1_25")
 
     _, binary = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)
     save_result(binary, "threshold")
