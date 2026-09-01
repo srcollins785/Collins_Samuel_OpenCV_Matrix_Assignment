@@ -1,0 +1,2 @@
+operation_id,operation,max_abs_difference,mean_abs_difference,result
+op01,Negative (255 - pixel),0,0.0,MATCH

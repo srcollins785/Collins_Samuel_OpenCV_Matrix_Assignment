@@ -42,14 +42,29 @@ def section_metadata() -> list[str]:
         "`input/image_200x200.png`."
     )
     lines.append("")
-    metadata = FULL_CSV / "image_metadata.csv"
-    if metadata.exists():
-        lines.append(pd.read_csv(metadata).to_markdown(index=False))
-        lines.append("")
     resized = INPUT_DIR / "image_200x200.png"
     if resized.exists():
         lines.append(f"![Prepared 200x200 image](../input/{resized.name})")
         lines.append("")
+
+    lines.append("### Image Properties")
+    lines.append("")
+    lines.append(
+        "The properties below were read from the final 200 x 200 image with OpenCV and are "
+        "stored in `csv_full_image/image_metadata.csv`."
+    )
+    lines.append("")
+    metadata = FULL_CSV / "image_metadata.csv"
+    if metadata.exists():
+        lines.append(pd.read_csv(metadata).to_markdown(index=False))
+        lines.append("")
+    lines.append(
+        "**Channel order.** `cv2.imread` loads a color image in **BGR order**, not RGB order. "
+        "Index 0 of the third axis is blue, index 1 is green, and index 2 is red. All channel "
+        "matrices in this report follow that convention, and `cv2.split` returns the channels in "
+        "the same B, G, R sequence."
+    )
+    lines.append("")
     return lines
 
 
@@ -58,8 +73,9 @@ def section_matrices() -> list[str]:
         "## 3. The Image as a Numerical Matrix",
         "",
         "Each channel of the 200 x 200 image is exported in full to `csv_full_image/` as a "
-        f"200 x 200 grid of integers in the range 0-255. Because a full grid is too large to "
-        f"print, the top-left {PREVIEW} x {PREVIEW} corner of each channel is shown below; the "
+        "200 x 200 grid of integers in the range 0-255. Each file contains numerical values only, "
+        "with no row names, column headers, or DataFrame index. Because a full grid is too large "
+        f"to print, the top-left {PREVIEW} x {PREVIEW} corner of each channel is shown below; the "
         "complete values are in the CSV files.",
         "",
     ]
@@ -76,6 +92,51 @@ def section_matrices() -> list[str]:
         lines.append(f"### {label} (`{filename}`)")
         lines.append("")
         lines.append(matrix_table(path, PREVIEW))
+        lines.append("")
+
+    lines += section_grayscale_math()
+    return lines
+
+
+def section_grayscale_math() -> list[str]:
+    lines = [
+        "### Grayscale Calculation",
+        "",
+        "Grayscale conversion is a weighted sum of the three color channels rather than a plain "
+        "average. The weights reflect how sensitive human vision is to each color: the eye is most "
+        "sensitive to green, less to red, and least to blue. OpenCV uses",
+        "",
+        "```",
+        "I_gray = round(0.114 * B + 0.587 * G + 0.299 * R)",
+        "```",
+        "",
+        "with the channels taken in BGR order as loaded by `cv2.imread`. The weights sum to 1.0, "
+        "so the result stays within the original 0-255 range.",
+        "",
+    ]
+    verification = MANUAL_CSV / "grayscale_pixel_verification.csv"
+    if verification.exists():
+        frame = pd.read_csv(verification)
+        lines.append(
+            f"The equation was applied by hand to {len(frame)} pixels taken from different "
+            "locations in the image and compared against the value OpenCV produced."
+        )
+        lines.append("")
+        lines.append(frame.to_markdown(index=False))
+        lines.append("")
+        worst = int(frame["difference"].abs().max())
+        if worst == 0:
+            lines.append(
+                "Every manually calculated value matches OpenCV exactly, confirming the weighted "
+                "equation is the operation OpenCV performs."
+            )
+        else:
+            lines.append(
+                f"The largest difference is {worst}. Small differences of one intensity level are "
+                "expected because OpenCV evaluates the weights in fixed-point integer arithmetic "
+                "rather than floating point, so its rounding can differ slightly from the "
+                "floating-point calculation done here."
+            )
         lines.append("")
     return lines
 

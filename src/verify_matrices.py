@@ -1,4 +1,8 @@
-"""Compare hand-calculated results against OpenCV output on a 7x7 patch."""
+"""Compare hand-calculated results against OpenCV output.
+
+Two checks are performed: per-pixel grayscale conversion on selected pixels, and full
+operation matrices on a 7x7 patch.
+"""
 
 from pathlib import Path
 
@@ -7,11 +11,15 @@ import numpy as np
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parent.parent
+COLOR_IMAGE = ROOT / "input" / "image_200x200.png"
 GRAY_CSV = ROOT / "csv_full_image" / "image_gray_200x200.csv"
 CSV_DIR = ROOT / "csv_manual_calculations"
 
 PATCH_SIZE = 7
 PATCH_ORIGIN = (0, 0)  # top-left (row, col) of the patch inside the 200x200 image
+
+# Pixels sampled from spread-out locations for the manual grayscale check.
+SAMPLE_PIXELS = [(0, 0), (50, 150), (100, 100), (150, 50), (199, 199)]
 
 
 def load_patch() -> np.ndarray:
@@ -34,6 +42,37 @@ def save(matrix: np.ndarray, name: str) -> None:
     pd.DataFrame(matrix).to_csv(CSV_DIR / f"{name}.csv", index=False, header=False)
 
 
+def verify_grayscale_pixels() -> None:
+    """Check I_gray = round(0.114B + 0.587G + 0.299R) against cv2.cvtColor pixel by pixel."""
+    image = cv2.imread(str(COLOR_IMAGE), cv2.IMREAD_COLOR)
+    if image is None:
+        raise FileNotFoundError(f"{COLOR_IMAGE} missing. Run prepare_image.py first.")
+    opencv_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+    rows = []
+    for row, col in SAMPLE_PIXELS:
+        blue, green, red = (int(v) for v in image[row, col])
+        manual = round(0.114 * blue + 0.587 * green + 0.299 * red)
+        actual = int(opencv_gray[row, col])
+        rows.append(
+            {
+                "row": row,
+                "column": col,
+                "B": blue,
+                "G": green,
+                "R": red,
+                "manual_gray": manual,
+                "opencv_gray": actual,
+                "difference": manual - actual,
+            }
+        )
+
+    frame = pd.DataFrame(rows)
+    frame.to_csv(CSV_DIR / "grayscale_pixel_verification.csv", index=False)
+    worst = int(frame["difference"].abs().max())
+    print(f"grayscale pixels: {len(frame)} checked, max absolute difference = {worst}")
+
+
 def compare(op_id: str, label: str, patch: np.ndarray, manual: np.ndarray, opencv: np.ndarray) -> dict:
     difference = manual.astype(np.int32) - opencv.astype(np.int32)
     save(patch, f"{op_id}_input")
@@ -53,6 +92,7 @@ def compare(op_id: str, label: str, patch: np.ndarray, manual: np.ndarray, openc
 
 def main() -> None:
     CSV_DIR.mkdir(exist_ok=True)
+    verify_grayscale_pixels()
     patch = load_patch()
     save(patch, "manual_input_patch_7x7")
 

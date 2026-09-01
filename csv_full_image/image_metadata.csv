@@ -1,8 +1,15 @@
 property,value
-original_height,2316
-original_width,2316
-original_channels,3
-resized_height,200
-resized_width,200
-resized_channels,3
+width,200
+height,200
+channels,3
+shape,"(200, 200, 3)"
 dtype,uint8
+channel_order,BGR
+min_pixel_value,1
+max_pixel_value,227
+mean_pixel_value,149.1377
+std_pixel_value,63.6612
+gray_min_pixel_value,2
+gray_max_pixel_value,224
+gray_mean_pixel_value,150.2941
+gray_std_pixel_value,63.6493

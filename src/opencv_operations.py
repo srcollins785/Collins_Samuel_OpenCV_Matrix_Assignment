@@ -23,6 +23,30 @@ def save_matrix(matrix: np.ndarray, name: str) -> None:
     pd.DataFrame(matrix).to_csv(CSV_DIR / f"{name}.csv", index=False, header=False)
 
 
+def write_metadata(image: np.ndarray, gray: np.ndarray) -> None:
+    height, width, channels = image.shape
+    rows = [
+        ("width", width),
+        ("height", height),
+        ("channels", channels),
+        ("shape", f"{image.shape}"),
+        ("dtype", str(image.dtype)),
+        # OpenCV's imread returns channels in BGR order, not RGB.
+        ("channel_order", "BGR"),
+        ("min_pixel_value", int(image.min())),
+        ("max_pixel_value", int(image.max())),
+        ("mean_pixel_value", round(float(image.mean()), 4)),
+        ("std_pixel_value", round(float(image.std()), 4)),
+        ("gray_min_pixel_value", int(gray.min())),
+        ("gray_max_pixel_value", int(gray.max())),
+        ("gray_mean_pixel_value", round(float(gray.mean()), 4)),
+        ("gray_std_pixel_value", round(float(gray.std()), 4)),
+    ]
+    pd.DataFrame(rows, columns=["property", "value"]).to_csv(
+        CSV_DIR / "image_metadata.csv", index=False
+    )
+
+
 def save_result(image: np.ndarray, name: str) -> None:
     cv2.imwrite(str(IMAGE_DIR / f"{name}.png"), image)
     save_matrix(image, f"{name}_matrix")
@@ -56,6 +80,7 @@ def main() -> None:
 
     image = load_image()
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    write_metadata(image, gray)
     export_channels(image, gray)
 
     save_result(gray, "grayscale")
