@@ -22,6 +22,16 @@ def load_original() -> np.ndarray:
     return image
 
 
+def validate_square(image: np.ndarray) -> None:
+    height, width = image.shape[:2]
+    if height != width:
+        raise ValueError(
+            f"{ORIGINAL.name} is {width}x{height}, not square. Resizing it to "
+            f"{SIZE[0]}x{SIZE[1]} would distort the aspect ratio. Crop the photo to a square "
+            "before running this script."
+        )
+
+
 def resize(image: np.ndarray) -> np.ndarray:
     return cv2.resize(image, SIZE, interpolation=cv2.INTER_AREA)
 
@@ -42,6 +52,7 @@ def write_metadata(original: np.ndarray, resized: np.ndarray) -> None:
 def main() -> None:
     CSV_DIR.mkdir(exist_ok=True)
     original = load_original()
+    validate_square(original)
     resized = resize(original)
     cv2.imwrite(str(RESIZED), resized)
     write_metadata(original, resized)
