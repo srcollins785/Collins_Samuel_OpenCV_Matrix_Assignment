@@ -1,0 +1,9 @@
+noise_type,filter,mae_vs_original,rmse_vs_original,percent_error_removed
+salt and pepper (5%),none (noisy input),6.4093,32.3802,0.0
+salt and pepper (5%),mean 3x3,7.7153,12.8117,-20.38
+salt and pepper (5%),gaussian 3x3,7.3322,13.4482,-14.4
+salt and pepper (5%),median 3x3,1.8407,4.911,71.28
+gaussian (sigma 15),none (noisy input),11.9334,14.9608,0.0
+gaussian (sigma 15),mean 3x3,5.5295,7.8705,53.66
+gaussian (sigma 15),gaussian 3x3,5.5266,7.4144,53.69
+gaussian (sigma 15),median 3x3,6.0254,8.0567,49.51

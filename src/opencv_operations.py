@@ -19,6 +19,9 @@ MEAN_KERNEL = np.ones((3, 3), np.float32) / 9.0
 GAUSSIAN_KERNEL = np.array([[1, 2, 1], [2, 4, 2], [1, 2, 1]], np.float32) / 16.0
 MORPH_KERNEL = np.ones((3, 3), np.uint8)
 
+# Every 2D result is kept so the change-magnitude analysis can compare them to the source.
+RESULTS: dict[str, np.ndarray] = {}
+
 
 def load_image() -> np.ndarray:
     image = cv2.imread(str(INPUT_IMAGE), cv2.IMREAD_COLOR)
@@ -43,6 +46,7 @@ def save_image(image: np.ndarray, name: str) -> None:
 def save_result(image: np.ndarray, name: str) -> None:
     save_image(image, name)
     save_matrix(image, f"{name}_matrix")
+    RESULTS[name] = image
 
 
 def save_signed_result(matrix: np.ndarray, name: str) -> None:
@@ -229,6 +233,71 @@ def contour_analysis(image: np.ndarray, binary: np.ndarray) -> None:
     print(f"contours: {len(contours)} found, largest (excluding frame) is id {largest}")
 
 
+def measure_change(gray: np.ndarray) -> None:
+    """Rank operations by how far their output moves from the source grayscale image."""
+    rows = []
+    for name, result in RESULTS.items():
+        if result.shape != gray.shape or result.dtype != gray.dtype:
+            continue
+        difference = np.abs(result.astype(float) - gray.astype(float))
+        rows.append(
+            {
+                "operation": name,
+                "mean_abs_change": round(float(difference.mean()), 4),
+                "max_abs_change": int(difference.max()),
+                "rmse": round(float(np.sqrt((difference**2).mean())), 4),
+                "percent_pixels_changed": round(100.0 * float((difference > 0).mean()), 2),
+            }
+        )
+    frame = pd.DataFrame(rows).sort_values("mean_abs_change", ascending=False)
+    frame.to_csv(CSV_DIR / "operation_change_magnitude.csv", index=False)
+    print(f"largest mean change: {frame.iloc[0]['operation']} ({frame.iloc[0]['mean_abs_change']})")
+
+
+def measure_noise_reduction(gray: np.ndarray) -> None:
+    """Add known noise, filter it, and measure which filter recovers the original best."""
+    rng = np.random.default_rng(0)
+
+    salt_pepper = gray.copy()
+    mask = rng.random(gray.shape)
+    salt_pepper[mask < 0.025] = 0
+    salt_pepper[mask > 0.975] = 255
+
+    gaussian_noise = np.clip(
+        gray.astype(float) + rng.normal(0, 15, gray.shape), 0, 255
+    ).astype(np.uint8)
+
+    filters = {
+        "none (noisy input)": lambda img: img,
+        "mean 3x3": lambda img: cv2.filter2D(img, -1, MEAN_KERNEL),
+        "gaussian 3x3": lambda img: cv2.filter2D(img, -1, GAUSSIAN_KERNEL),
+        "median 3x3": lambda img: cv2.medianBlur(img, 3),
+    }
+
+    rows = []
+    for noise_name, noisy in [
+        ("salt and pepper (5%)", salt_pepper),
+        ("gaussian (sigma 15)", gaussian_noise),
+    ]:
+        save_image(noisy, f"noise_{noise_name.split()[0]}")
+        baseline = float(np.abs(noisy.astype(float) - gray.astype(float)).mean())
+        for filter_name, apply in filters.items():
+            restored = apply(noisy)
+            error = np.abs(restored.astype(float) - gray.astype(float))
+            mae = float(error.mean())
+            rows.append(
+                {
+                    "noise_type": noise_name,
+                    "filter": filter_name,
+                    "mae_vs_original": round(mae, 4),
+                    "rmse_vs_original": round(float(np.sqrt((error**2).mean())), 4),
+                    "percent_error_removed": round(100.0 * (baseline - mae) / baseline, 2),
+                }
+            )
+    pd.DataFrame(rows).to_csv(CSV_DIR / "noise_reduction_comparison.csv", index=False)
+    print("noise reduction comparison written")
+
+
 def main() -> None:
     IMAGE_DIR.mkdir(exist_ok=True)
     CSV_DIR.mkdir(exist_ok=True)
@@ -243,6 +312,8 @@ def main() -> None:
     edge_detection(gray)
     morphology(binary)
     contour_analysis(image, binary)
+    measure_change(gray)
+    measure_noise_reduction(gray)
     print(f"Wrote outputs to {IMAGE_DIR} and matrices to {CSV_DIR}")
 
 

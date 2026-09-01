@@ -7,7 +7,7 @@ samuel.collins@students.cau.edu
 
 **Course:** CCIS 727 - Introduction to Computer Vision  
 **Instructor:** Dr. Kishor Gupta  
-**Date:** 2026-08-31
+**Date:** 2026-09-01
 
 ## 1. Objective
 
@@ -1949,11 +1949,50 @@ Maximum absolute difference **0.0**, mean absolute difference **0.0**, exact mat
 
 ### Which Operation Produced the Largest Visual Change
 
-Binary thresholding produced the largest visual change. It collapses 256 intensity levels into two, discarding every gradient, texture, and shading cue in the image and leaving only a silhouette. The negative transformation changes every pixel value by a large amount as well, but it is a reversible one-to-one mapping that preserves all structure, so the subject remains fully recognizable. Canny is similarly drastic in appearance, but it is a detector rather than a transformation: it reports where edges are instead of producing a modified version of the image.
+Rather than judging this by eye, every operation whose output has the same shape and type as the source grayscale image was compared against it pixel by pixel. The table below reports the mean absolute change, the largest single-pixel change, the root mean square error, and the share of pixels altered. The full ranking is in `csv_full_image/operation_change_magnitude.csv`.
+
+| operation      |   mean_abs_change |   max_abs_change |     rmse |   percent_pixels_changed |
+|:---------------|------------------:|-----------------:|---------:|-------------------------:|
+| canny          |          152.611  |              249 | 165.016  |                   100    |
+| negative       |          126.324  |              251 | 135.215  |                   100    |
+| morph_dilation |           66.0823 |              236 |  71.8716 |                   100    |
+| morph_erosion  |           65.8377 |              217 |  71.4365 |                   100    |
+| morph_opening  |           64.3879 |              174 |  68.8002 |                   100    |
+| morph_closing  |           64.3575 |              191 |  68.7438 |                   100    |
+| contour_mask   |           64.3381 |              127 |  68.7079 |                   100    |
+| threshold      |           64.3381 |              127 |  68.7079 |                   100    |
+| rotate_30      |           57.4872 |              221 |  88.1403 |                    98.26 |
+| rotate_90      |           51.2384 |              198 |  70.7826 |                    99.39 |
+
+By mean absolute change, **canny** produced the largest change at 152.6108 intensity levels per pixel, followed by **negative** at 126.3238.
+
+The measurement is worth interpreting carefully, because the two leaders are large for opposite reasons. Canny scores highest because its output is binary and almost entirely black: nearly every pixel of a mid-tone photograph is driven to 0, so the average distance from the original is enormous even though Canny is a detector rather than a transformation of the image. The negative is second because it is the largest possible one-to-one remapping, sending every value v to 255 - v, yet it destroys no information at all and is perfectly reversible. Thresholding, which discards the most information of any operation here by collapsing 256 levels into 2, ranks only mid-table at 64.3381 because the surviving values stay numerically close to the originals.
+
+The lesson is that numerical distance and information loss are different things. If the question means the largest change in appearance, the measurement points to Canny. If it means the greatest loss of image content, thresholding is the stronger answer despite its smaller numerical distance.
 
 ### Which Filtering Method Best Reduced Noise
 
-The median filter is the most effective of the three at removing noise while keeping the image usable. Mean and Gaussian filtering are both convolutions, so an extreme outlier is averaged into its neighbors and spreads its error across the output rather than being eliminated. The median is a rank filter: an isolated extreme value sorts to one end of the nine-value list and is never selected as the middle element, so it is discarded outright. This is why the median filter is the standard choice for salt-and-pepper noise, while Gaussian filtering is preferred for smoothly distributed sensor noise.
+This was tested directly. Two kinds of noise were added to the grayscale image with a fixed random seed: salt-and-pepper noise affecting 5 percent of pixels, and Gaussian noise with a standard deviation of 15. Each of the three filters was then applied and the result compared against the clean original. The `percent_error_removed` column gives the reduction in mean absolute error relative to leaving the noise unfiltered, so a negative value means the filter made the image worse.
+
+| noise_type           | filter             |   mae_vs_original |   rmse_vs_original |   percent_error_removed |
+|:---------------------|:-------------------|------------------:|-------------------:|------------------------:|
+| salt and pepper (5%) | none (noisy input) |            6.4093 |            32.3802 |                    0    |
+| salt and pepper (5%) | mean 3x3           |            7.7153 |            12.8117 |                  -20.38 |
+| salt and pepper (5%) | gaussian 3x3       |            7.3322 |            13.4482 |                  -14.4  |
+| salt and pepper (5%) | median 3x3         |            1.8407 |             4.911  |                   71.28 |
+| gaussian (sigma 15)  | none (noisy input) |           11.9334 |            14.9608 |                    0    |
+| gaussian (sigma 15)  | mean 3x3           |            5.5295 |             7.8705 |                   53.66 |
+| gaussian (sigma 15)  | gaussian 3x3       |            5.5266 |             7.4144 |                   53.69 |
+| gaussian (sigma 15)  | median 3x3         |            6.0254 |             8.0567 |                   49.51 |
+
+For **salt and pepper (5%)** noise the best filter was **median 3x3**, removing 71.28 percent of the error.
+For **gaussian (sigma 15)** noise the best filter was **gaussian 3x3**, removing 53.69 percent of the error.
+
+There is no single winner, and that is the interesting result. The median filter dominates on salt-and-pepper noise while the mean and Gaussian filters actually increase the mean absolute error there, because averaging spreads each isolated extreme value across its whole neighborhood instead of removing it. Being a rank filter, the median sorts an outlier to one end of the nine values and never selects it, so the corrupted pixel is discarded outright.
+
+On Gaussian noise the ordering reverses. The mean and Gaussian filters perform nearly identically and both beat the median, because Gaussian noise is zero-mean and spread across every pixel rather than concentrated in a few, which is exactly the situation averaging is designed for. The median gives up some accuracy here since it discards seven of the nine samples instead of using them.
+
+The practical conclusion is that the filter must be matched to the noise. Impulse noise calls for a rank filter; distributed sensor noise calls for a linear one.
 
 ### Differences Among Mean, Gaussian, and Median Filtering
 
@@ -1983,8 +2022,14 @@ This is covered quantitatively in section 4.2. In summary, nearest neighbor copi
 
 ## 7. What I Learned
 
-The central lesson is that a digital image is a numerical matrix, and that every OpenCV function is a specific, reproducible piece of arithmetic on that matrix. Nothing in this assignment required trusting OpenCV as a black box: each of the fourteen verified operations was reproduced from its defining equation using only indexing, multiplication, addition, sorting, and square roots, and every one matched the library output in 100 percent of cells.
+> **[ THIS SECTION IS NOT YET WRITTEN ]**
+>
+> Section 7 asks what *I* learned, so it has to be written in my own words rather than generated. To fill it in, set `REFLECTION_TEXT` at the top of `src/generate_report.py` and regenerate the report.
 
-Reimplementing the operations from their defining equations made the structure behind them visible. Grayscale conversion is a weighted sum whose coefficients encode human visual sensitivity. Spatial filtering is correlation with a kernel, and the kernel weights alone determine whether the result is a blur, an edge detector, or a sharpener. Rank filters such as the median and the morphological operators are not convolutions at all but selections from a sorted neighborhood, which is precisely why they behave so differently at edges and in the presence of outliers.
+Prompts to write against, with the evidence this project produced:
 
-Equally important was learning where the mathematics meets implementation reality. The differences that did arise during development came not from the equations but from representation: rounding versus truncation, signed versus unsigned storage, clipping at the ends of the range, and the invented values at image borders. Reproducing a library function correctly means matching its numerical conventions as well as its formula.
+- **On images as matrices.** All fourteen manual operations matched OpenCV in 100 percent of cells. What does it change about how you think about an image, knowing every library call is arithmetic you can reproduce yourself?
+- **On kernels.** The mean and Gaussian filters differ only in nine weights, yet behave noticeably differently. Sobel uses the same convolution machinery to detect edges instead of blurring. What does that suggest about what a kernel actually is?
+- **On rank filters.** The noise experiment in section 6 showed the median removing 71 percent of salt-and-pepper error while the averaging filters made it worse, and the ordering reversing for Gaussian noise. What did that result teach you that the formulas alone did not?
+- **On measurement versus intuition.** The largest-visual-change analysis ranked Canny first and thresholding mid-table, which is not what inspection of the images suggests. How did having a number change your answer?
+- **On implementation reality.** Every discrepancy encountered came from rounding, clipping, data types, or border handling rather than from the mathematics. What would you watch for next time?
