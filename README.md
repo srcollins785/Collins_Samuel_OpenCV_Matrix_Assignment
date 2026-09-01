@@ -1,6 +1,8 @@
 # Collins_Samuel_OpenCV_Matrix_Assignment
 
-Computer Vision — Assignment 1
+Assignment 1 — CCIS 727, Introduction to Computer Vision
+Clark Atlanta University · Instructor: Dr. Kishor Gupta
+Samuel Collins, Ph.D. Student, Department of Cyber-Physical Systems
 
 ## Assignment Objective
 

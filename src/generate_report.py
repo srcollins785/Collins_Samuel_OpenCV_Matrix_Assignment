@@ -17,6 +17,8 @@ STUDENT_NAME = "Samuel Collins"
 STUDENT_TITLE = "Ph.D. Student, Department of Cyber-Physical Systems"
 INSTITUTION = "Clark Atlanta University"
 STUDENT_EMAIL = "samuel.collins@students.cau.edu"
+COURSE = "CCIS 727 - Introduction to Computer Vision"
+INSTRUCTOR = "Dr. Kishor Gupta"
 PREVIEW = 8  # corner size, in pixels, shown for full 200x200 matrices
 
 OPERATION_GROUPS = [
@@ -505,7 +507,10 @@ def build() -> str:
         f"**{STUDENT_NAME}**  ",
         f"{STUDENT_TITLE}  ",
         f"{INSTITUTION}  ",
-        f"{STUDENT_EMAIL}  ",
+        f"{STUDENT_EMAIL}",
+        "",
+        f"**Course:** {COURSE}  ",
+        f"**Instructor:** {INSTRUCTOR}  ",
         f"**Date:** {date.today().isoformat()}",
         "",
         "## 1. Objective",
