@@ -34,7 +34,7 @@ def save(matrix: np.ndarray, name: str) -> None:
     pd.DataFrame(matrix).to_csv(CSV_DIR / f"{name}.csv", index=False, header=False)
 
 
-def compare(op_id: str, patch: np.ndarray, manual: np.ndarray, opencv: np.ndarray) -> None:
+def compare(op_id: str, label: str, patch: np.ndarray, manual: np.ndarray, opencv: np.ndarray) -> dict:
     difference = manual.astype(np.int32) - opencv.astype(np.int32)
     save(patch, f"{op_id}_input")
     save(manual, f"{op_id}_manual_output")
@@ -42,13 +42,24 @@ def compare(op_id: str, patch: np.ndarray, manual: np.ndarray, opencv: np.ndarra
     save(difference, f"{op_id}_difference")
     max_diff = int(np.abs(difference).max())
     print(f"{op_id}: max absolute difference = {max_diff} ({'match' if max_diff == 0 else 'MISMATCH'})")
+    return {
+        "operation_id": op_id,
+        "operation": label,
+        "max_abs_difference": max_diff,
+        "mean_abs_difference": float(np.abs(difference).mean()),
+        "result": "MATCH" if max_diff == 0 else "MISMATCH",
+    }
 
 
 def main() -> None:
     CSV_DIR.mkdir(exist_ok=True)
     patch = load_patch()
     save(patch, "manual_input_patch_7x7")
-    compare("op01", patch, manual_negative(patch), opencv_negative(patch))
+
+    results = [
+        compare("op01", "Negative (255 - pixel)", patch, manual_negative(patch), opencv_negative(patch)),
+    ]
+    pd.DataFrame(results).to_csv(CSV_DIR / "verification_summary.csv", index=False)
 
 
 if __name__ == "__main__":
