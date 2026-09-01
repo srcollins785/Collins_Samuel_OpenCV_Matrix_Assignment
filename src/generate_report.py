@@ -15,13 +15,112 @@ REPORT_MD = ROOT / "report" / "OpenCV_Matrix_Assignment_Report.md"
 STUDENT_NAME = "Samuel Collins"
 PREVIEW = 8  # corner size, in pixels, shown for full 200x200 matrices
 
-OPERATIONS = {
-    "grayscale": "Converts the three BGR channels into a single intensity channel.",
-    "negative": "Inverts every intensity value as `255 - pixel`.",
-    "threshold": "Maps intensities to 0 or 255 using a fixed cutoff of 127.",
-    "gaussian_blur": "Smooths the image by convolving with a 5x5 Gaussian kernel.",
-    "canny": "Detects edges using gradient thresholds of 100 and 200.",
-}
+OPERATION_GROUPS = [
+    (
+        "4.1 Color and Intensity Operations",
+        [
+            ("grayscale", "Weighted BGR conversion to a single intensity channel."),
+            ("channel_blue", "Blue channel isolated with `cv2.split`, shown as intensities."),
+            ("channel_green", "Green channel isolated with `cv2.split`."),
+            ("channel_red", "Red channel isolated with `cv2.split`."),
+            (
+                "merged_color",
+                "The three channels merged back with `cv2.merge([B, G, R])`. The result is "
+                "verified to be identical to the original image, which confirms the BGR order.",
+            ),
+            ("negative", "`I_negative = 255 - I`, inverting every intensity."),
+            (
+                "brightness_plus40",
+                "`I_bright = clip(I + 40, 0, 255)`. Clipping prevents values above 255 from "
+                "wrapping around to small numbers.",
+            ),
+            (
+                "contrast_1_25",
+                "`I_contrast = clip(1.25 x I, 0, 255)`. Values spread away from the midpoint, so "
+                "bright areas saturate at 255.",
+            ),
+            (
+                "threshold",
+                "`I_binary = 255` where `I > 127`, otherwise `0`. Produces the binary image used "
+                "for the morphological and contour sections.",
+            ),
+            (
+                "histogram_equalized",
+                "Histogram equalization redistributes intensities so the cumulative histogram is "
+                "approximately linear, increasing global contrast.",
+            ),
+            ("histogram_original", "Intensity distribution before equalization."),
+            ("histogram_equalized_plot", "Intensity distribution after equalization."),
+        ],
+    ),
+    (
+        "4.2 Geometric Operations",
+        [
+            ("center_crop_100x100", "The center 100 x 100 region, rows and columns 50 to 149."),
+            ("flip_horizontal", "`cv2.flip` with code 1 reverses column order."),
+            ("flip_vertical", "`cv2.flip` with code 0 reverses row order."),
+            ("rotate_90", "`cv2.rotate` by 90 degrees clockwise, a pure index transposition."),
+            (
+                "rotate_30",
+                "`cv2.warpAffine` with a 30 degree rotation about the center. Corners rotate "
+                "outside the frame and are cropped, and empty corners are filled with black.",
+            ),
+            ("resized_100x100", "Downsampled to 100 x 100 with `INTER_AREA`."),
+            ("upscaled_nearest", "The 100 x 100 image returned to 200 x 200 with nearest neighbor."),
+            ("upscaled_bilinear", "The 100 x 100 image returned to 200 x 200 with bilinear."),
+        ],
+    ),
+    (
+        "4.3 Spatial Filtering Operations",
+        [
+            ("filter_mean_3x3", "3 x 3 mean filter using `K_mean = (1/9) * ones(3, 3)`."),
+            (
+                "filter_gaussian_3x3",
+                "3 x 3 Gaussian filter using `K_Gaussian = (1/16) * [[1,2,1],[2,4,2],[1,2,1]]`. "
+                "Center-weighted, so it smooths less aggressively than the mean filter.",
+            ),
+            (
+                "filter_median_3x3",
+                "3 x 3 median filter. Being rank-based rather than a convolution, it removes "
+                "isolated outliers while keeping edges sharp.",
+            ),
+        ],
+    ),
+    (
+        "4.4 Edge-Detection Operations",
+        [
+            ("sobel_x", "Horizontal Sobel using `G_x = [[-1,0,1],[-2,0,2],[-1,0,1]]`."),
+            ("sobel_y", "Vertical Sobel using `G_y = [[-1,-2,-1],[0,0,0],[1,2,1]]`."),
+            ("sobel_magnitude", "Gradient magnitude `G = sqrt(G_x^2 + G_y^2)`."),
+            ("laplacian", "Second-derivative operator responding to intensity peaks and troughs."),
+            ("canny", "Canny edge detection with gradient thresholds of 100 and 200."),
+        ],
+    ),
+    (
+        "4.5 Morphological Operations",
+        [
+            (
+                "morph_erosion",
+                "Erosion with a 3 x 3 kernel of ones. A pixel stays white only when every pixel "
+                "under the kernel is white, so white regions shrink.",
+            ),
+            (
+                "morph_dilation",
+                "Dilation with the same kernel. A pixel becomes white when at least one pixel "
+                "under the kernel is white, so white regions grow.",
+            ),
+            ("morph_opening", "Erosion followed by dilation, removing small white specks."),
+            ("morph_closing", "Dilation followed by erosion, filling small black holes."),
+        ],
+    ),
+    (
+        "4.6 Contour Analysis",
+        [
+            ("contour_mask", "All detected contours filled white on a black background."),
+            ("contours_drawn", "Every detected contour outlined in red on the original image."),
+        ],
+    ),
+]
 
 
 def matrix_table(csv_path: Path, size: int | None = None) -> str:
@@ -145,31 +244,130 @@ def section_operations() -> list[str]:
     lines = [
         "## 4. OpenCV Operations",
         "",
-        "Each operation below was applied to the prepared image. The resulting image is saved "
-        "in `output_images/` and its full pixel matrix is saved in `csv_full_image/`.",
+        "Each operation below was applied to the prepared image. Every visual result is saved in "
+        "`output_images/` as a PNG and its numerical output is saved in `csv_full_image/` as a "
+        "CSV matrix. Unless stated otherwise, operations are performed on the grayscale image.",
         "",
     ]
-    for name, description in OPERATIONS.items():
-        image = IMAGE_DIR / f"{name}.png"
-        if not image.exists():
-            continue
-        lines.append(f"### {name.replace('_', ' ').title()}")
+    for group_title, operations in OPERATION_GROUPS:
+        lines.append(f"### {group_title}")
         lines.append("")
-        lines.append(description)
-        lines.append("")
-        lines.append(f"![{name}](../output_images/{image.name})")
-        lines.append("")
-        matrix = FULL_CSV / f"{name}_matrix.csv"
-        if matrix.exists():
-            lines.append(f"Top-left {PREVIEW} x {PREVIEW} corner of `{matrix.name}`:")
+        for name, description in operations:
+            image = IMAGE_DIR / f"{name}.png"
+            if not image.exists():
+                continue
+            lines.append(f"#### {name.replace('_', ' ').title()}")
             lines.append("")
-            lines.append(matrix_table(matrix, PREVIEW))
+            lines.append(description)
             lines.append("")
-    contours = FULL_CSV / "contour_measurements.csv"
-    if contours.exists():
-        lines.append("### Contour Measurements")
+            lines.append(f"![{name}](../output_images/{image.name})")
+            lines.append("")
+            matrix = FULL_CSV / f"{name}_matrix.csv"
+            if matrix.exists():
+                lines.append(f"Top-left {PREVIEW} x {PREVIEW} corner of `{matrix.name}`:")
+                lines.append("")
+                lines.append(matrix_table(matrix, PREVIEW))
+                lines.append("")
+        if group_title.startswith("4.2"):
+            lines += interpolation_discussion()
+        if group_title.startswith("4.4"):
+            lines += gradient_dtype_note()
+        if group_title.startswith("4.6"):
+            lines += contour_discussion()
+    return lines
+
+
+def interpolation_discussion() -> list[str]:
+    lines = [
+        "#### Nearest Neighbor Compared With Bilinear",
+        "",
+        "Both upscaled images start from the same 100 x 100 downsample, so any difference comes "
+        "purely from how each method invents the missing pixels.",
+        "",
+        "Nearest neighbor copies the value of the closest source pixel. It performs no arithmetic, "
+        "so every output value already existed in the source and edges stay hard. The cost is "
+        "blockiness: each source pixel becomes a visible 2 x 2 square of identical values, which "
+        "gives diagonal edges a stair-stepped appearance.",
+        "",
+        "Bilinear interpolation takes a weighted average of the four nearest source pixels. This "
+        "introduces intermediate values that were never in the source, producing smooth gradients "
+        "and removing the blocky squares, at the cost of softening genuine edges. The result looks "
+        "less sharp but closer to the original continuous image.",
+        "",
+    ]
+    comparison = FULL_CSV / "interpolation_comparison.csv"
+    if comparison.exists():
+        frame = pd.read_csv(comparison)
+        lines.append("Measured against the original 200 x 200 grayscale image:")
         lines.append("")
-        lines.append(pd.read_csv(contours).to_markdown(index=False))
+        lines.append(frame.to_markdown(index=False))
+        lines.append("")
+        lines.append(
+            "The bilinear result is closer to the original on both mean and maximum absolute "
+            "difference, and its lower standard deviation reflects the smoothing it applies."
+        )
+        lines.append("")
+    return lines
+
+
+def gradient_dtype_note() -> list[str]:
+    return [
+        "#### Data Type of Gradient Values",
+        "",
+        "Sobel and Laplacian responses are signed: an edge running dark to light gives a positive "
+        "value and the same edge running light to dark gives a negative one. Both operators are "
+        "therefore computed with `cv2.CV_64F` rather than the default 8-bit unsigned type. Writing "
+        "the result straight into a `uint8` matrix would clip every negative value to zero and "
+        "silently discard half of the detected edges. The CSV matrices in `csv_full_image/` hold "
+        "the true signed values; the PNG previews are separately scaled to the 0-255 display range.",
+        "",
+    ]
+
+
+def contour_discussion() -> list[str]:
+    lines = []
+    measurements = FULL_CSV / "contour_measurements.csv"
+    if not measurements.exists():
+        return lines
+    frame = pd.read_csv(measurements)
+    if frame.empty:
+        return lines
+
+    lines.append("#### Contour Measurements")
+    lines.append("")
+    lines.append(
+        f"Contours were detected from the binary threshold image, which yielded {len(frame)} "
+        "contours. `RETR_LIST` was used rather than `RETR_EXTERNAL` because the white region "
+        "reaches every image border: with `RETR_EXTERNAL` the only contour returned traces the "
+        "image frame itself and describes nothing about the image content. The frame contour is "
+        "still present in the table below and is flagged in the `is_image_frame` column, but it "
+        "is excluded when identifying the largest contour."
+    )
+    lines.append("")
+    lines.append(
+        "The full table is saved as `csv_full_image/contour_measurements.csv`. The ten largest "
+        "contours are shown here."
+    )
+    lines.append("")
+    lines.append(frame.nlargest(10, "area").to_markdown(index=False))
+    lines.append("")
+
+    largest = frame[frame["is_largest"]]
+    if not largest.empty:
+        row = largest.iloc[0]
+        centroid = (
+            f"({row['centroid_x']}, {row['centroid_y']})"
+            if str(row["centroid_x"]) not in ("", "nan")
+            else "undefined, because the contour encloses zero area"
+        )
+        lines.append("**Largest contour**")
+        lines.append("")
+        lines.append(f"- Contour id: {row['contour_id']}")
+        lines.append(f"- Area: {row['area']}")
+        lines.append(f"- Perimeter: {row['perimeter']}")
+        lines.append(f"- Bounding box x, y: {row['bbox_x']}, {row['bbox_y']}")
+        lines.append(f"- Bounding box width, height: {row['bbox_width']}, {row['bbox_height']}")
+        lines.append(f"- Centroid: {centroid}")
         lines.append("")
     return lines
 
