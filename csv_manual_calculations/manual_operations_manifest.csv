@@ -1,0 +1,15 @@
+operation_id,operation,file_prefix,output_shape,tolerance,has_kernel
+op01,Grayscale conversion (5 color pixels),op01_grayscale,5x1,1,False
+op02,Negative transformation,op02_negative,7x7,0,False
+op03,Brightness adjustment (+40),op03_brightness,7x7,1,False
+op04,Contrast adjustment (x1.25),op04_contrast,7x7,1,False
+op05,Binary thresholding (>127),op05_threshold,7x7,0,False
+op06,Horizontal flip,op06_flip_horizontal,7x7,0,False
+op07,Mean filter (3x3),op07_mean,5x5,1,True
+op08,Gaussian filter (3x3),op08_gaussian,5x5,1,True
+op09,Median filter (3x3),op09_median,5x5,0,False
+op10,Sobel Gx,op10_sobel_gx,5x5,0,True
+op11,Sobel Gy,op11_sobel_gy,5x5,0,True
+op12,Sobel gradient magnitude,op12_sobel_magnitude,5x5,1,False
+op13,Erosion (3x3 ones),op13_erosion,5x5,0,True
+op14,Dilation (3x3 ones),op14_dilation,5x5,0,True

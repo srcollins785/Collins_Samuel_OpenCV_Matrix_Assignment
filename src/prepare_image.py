@@ -34,12 +34,19 @@ def resize(image: np.ndarray) -> np.ndarray:
     return cv2.resize(image, SIZE, interpolation=cv2.INTER_AREA)
 
 
+def validate_output(resized: np.ndarray) -> None:
+    if resized.shape[:2] != (SIZE[1], SIZE[0]):
+        raise ValueError(f"Resized image is {resized.shape[:2]}, expected {(SIZE[1], SIZE[0])}.")
+
+
 def main() -> None:
+    INPUT_DIR.mkdir(exist_ok=True)
     original = load_original()
     validate_square(original)
     resized = resize(original)
+    validate_output(resized)
     cv2.imwrite(str(RESIZED), resized)
-    print(f"Wrote {RESIZED} ({resized.shape[1]}x{resized.shape[0]})")
+    print(f"Wrote {RESIZED} ({resized.shape[1]}x{resized.shape[0]}), confirmed 200x200")
 
 
 if __name__ == "__main__":

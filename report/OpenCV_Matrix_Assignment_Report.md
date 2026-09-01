@@ -762,26 +762,30 @@ Saved as `csv_manual_calculations/manual_input_patch_7x7.csv`.
 | r5 |  212 |  210 |  207 |  172 |   36 |   36 |   38 |
 | r6 |  211 |  210 |  207 |  192 |   87 |   36 |   36 |
 
-### Summary of All Manual Operations
+### Verification Statistics for All Manual Operations
 
-| operation_id   | operation                             | output_shape   |   max_abs_difference | result   |
-|:---------------|:--------------------------------------|:---------------|---------------------:|:---------|
-| op01           | Grayscale conversion (5 color pixels) | 5x1            |                    0 | MATCH    |
-| op02           | Negative transformation               | 7x7            |                    0 | MATCH    |
-| op03           | Brightness adjustment (+40)           | 7x7            |                    0 | MATCH    |
-| op04           | Contrast adjustment (x1.25)           | 7x7            |                    0 | MATCH    |
-| op05           | Binary thresholding (>127)            | 7x7            |                    0 | MATCH    |
-| op06           | Horizontal flip                       | 7x7            |                    0 | MATCH    |
-| op07           | Mean filter (3x3)                     | 5x5            |                    0 | MATCH    |
-| op08           | Gaussian filter (3x3)                 | 5x5            |                    0 | MATCH    |
-| op09           | Median filter (3x3)                   | 5x5            |                    0 | MATCH    |
-| op10           | Sobel Gx                              | 5x5            |                    0 | MATCH    |
-| op11           | Sobel Gy                              | 5x5            |                    0 | MATCH    |
-| op12           | Sobel gradient magnitude              | 5x5            |                    0 | MATCH    |
-| op13           | Erosion (3x3 ones)                    | 5x5            |                    0 | MATCH    |
-| op14           | Dilation (3x3 ones)                   | 5x5            |                    0 | MATCH    |
+Verification is performed by `src/verify_matrices.py`, a separate program that reloads the saved manual and OpenCV matrices from disk, confirms their dimensions match, and computes the signed difference `D = I_OpenCV - I_manual`. Exact-match tolerance is 0 for operations built from exact integer arithmetic (negative, thresholding, flipping, median, Sobel, erosion, dilation) and 1 intensity level for operations involving floating-point weights or rounding (grayscale, brightness, contrast, mean, Gaussian, gradient magnitude).
 
-All 14 of 14 operations reproduce the OpenCV result. Where a maximum difference is not exactly zero it is on the order of 1e-14, which is floating-point representation error rather than a disagreement in the arithmetic.
+| operation_id   | operation                             | output_shape   |   max_abs_difference |   mean_abs_difference |   exact_match_cells |   total_cells |   exact_match_percentage |   tolerance | verdict   |
+|:---------------|:--------------------------------------|:---------------|---------------------:|----------------------:|--------------------:|--------------:|-------------------------:|------------:|:----------|
+| op01           | Grayscale conversion (5 color pixels) | 5x1            |                    0 |                     0 |                   5 |             5 |                      100 |           1 | PASS      |
+| op02           | Negative transformation               | 7x7            |                    0 |                     0 |                  49 |            49 |                      100 |           0 | PASS      |
+| op03           | Brightness adjustment (+40)           | 7x7            |                    0 |                     0 |                  49 |            49 |                      100 |           1 | PASS      |
+| op04           | Contrast adjustment (x1.25)           | 7x7            |                    0 |                     0 |                  49 |            49 |                      100 |           1 | PASS      |
+| op05           | Binary thresholding (>127)            | 7x7            |                    0 |                     0 |                  49 |            49 |                      100 |           0 | PASS      |
+| op06           | Horizontal flip                       | 7x7            |                    0 |                     0 |                  49 |            49 |                      100 |           0 | PASS      |
+| op07           | Mean filter (3x3)                     | 5x5            |                    0 |                     0 |                  25 |            25 |                      100 |           1 | PASS      |
+| op08           | Gaussian filter (3x3)                 | 5x5            |                    0 |                     0 |                  25 |            25 |                      100 |           1 | PASS      |
+| op09           | Median filter (3x3)                   | 5x5            |                    0 |                     0 |                  25 |            25 |                      100 |           0 | PASS      |
+| op10           | Sobel Gx                              | 5x5            |                    0 |                     0 |                  25 |            25 |                      100 |           0 | PASS      |
+| op11           | Sobel Gy                              | 5x5            |                    0 |                     0 |                  25 |            25 |                      100 |           0 | PASS      |
+| op12           | Sobel gradient magnitude              | 5x5            |                    0 |                     0 |                  25 |            25 |                      100 |           1 | PASS      |
+| op13           | Erosion (3x3 ones)                    | 5x5            |                    0 |                     0 |                  25 |            25 |                      100 |           0 | PASS      |
+| op14           | Dilation (3x3 ones)                   | 5x5            |                    0 |                     0 |                  25 |            25 |                      100 |           0 | PASS      |
+
+All 14 of 14 operations pass. 14 of them match OpenCV in 100 percent of cells, with a maximum absolute difference of 0 and a mean absolute difference of 0, so there are no nonzero differences left to explain.
+
+One detail is worth noting. When the mean filter is computed in memory the largest disagreement is about 3e-14, because the weight 1/9 has no exact binary representation and the manual loop accumulates its nine products in a different order than OpenCV does. That residue is far below one intensity level and disappears once the matrices are written to CSV at four decimal places, which is why the table reports exactly 0.
 
 ### OP01 - Grayscale conversion (5 color pixels)
 
@@ -825,7 +829,7 @@ All 14 of 14 operations reproduce the OpenCV result. Where a maximum difference 
 | r3 |    0 |
 | r4 |    0 |
 
-Maximum absolute difference: **0.0** (MATCH).
+Maximum absolute difference **0.0**, mean absolute difference **0.0**, exact matches **5/5** (**100.0 percent**), tolerance 1: **PASS**.
 
 ### OP02 - Negative transformation
 
@@ -877,7 +881,7 @@ Maximum absolute difference: **0.0** (MATCH).
 | r5 |    0 |    0 |    0 |    0 |    0 |    0 |    0 |
 | r6 |    0 |    0 |    0 |    0 |    0 |    0 |    0 |
 
-Maximum absolute difference: **0.0** (MATCH).
+Maximum absolute difference **0.0**, mean absolute difference **0.0**, exact matches **49/49** (**100.0 percent**), tolerance 0: **PASS**.
 
 ### OP03 - Brightness adjustment (+40)
 
@@ -929,7 +933,7 @@ Maximum absolute difference: **0.0** (MATCH).
 | r5 |    0 |    0 |    0 |    0 |    0 |    0 |    0 |
 | r6 |    0 |    0 |    0 |    0 |    0 |    0 |    0 |
 
-Maximum absolute difference: **0.0** (MATCH).
+Maximum absolute difference **0.0**, mean absolute difference **0.0**, exact matches **49/49** (**100.0 percent**), tolerance 1: **PASS**.
 
 ### OP04 - Contrast adjustment (x1.25)
 
@@ -981,7 +985,7 @@ Maximum absolute difference: **0.0** (MATCH).
 | r5 |    0 |    0 |    0 |    0 |    0 |    0 |    0 |
 | r6 |    0 |    0 |    0 |    0 |    0 |    0 |    0 |
 
-Maximum absolute difference: **0.0** (MATCH).
+Maximum absolute difference **0.0**, mean absolute difference **0.0**, exact matches **49/49** (**100.0 percent**), tolerance 1: **PASS**.
 
 ### OP05 - Binary thresholding (>127)
 
@@ -1033,7 +1037,7 @@ Maximum absolute difference: **0.0** (MATCH).
 | r5 |    0 |    0 |    0 |    0 |    0 |    0 |    0 |
 | r6 |    0 |    0 |    0 |    0 |    0 |    0 |    0 |
 
-Maximum absolute difference: **0.0** (MATCH).
+Maximum absolute difference **0.0**, mean absolute difference **0.0**, exact matches **49/49** (**100.0 percent**), tolerance 0: **PASS**.
 
 ### OP06 - Horizontal flip
 
@@ -1085,7 +1089,7 @@ Maximum absolute difference: **0.0** (MATCH).
 | r5 |    0 |    0 |    0 |    0 |    0 |    0 |    0 |
 | r6 |    0 |    0 |    0 |    0 |    0 |    0 |    0 |
 
-Maximum absolute difference: **0.0** (MATCH).
+Maximum absolute difference **0.0**, mean absolute difference **0.0**, exact matches **49/49** (**100.0 percent**), tolerance 0: **PASS**.
 
 ### OP07 - Mean filter (3x3)
 
@@ -1133,10 +1137,10 @@ Maximum absolute difference: **0.0** (MATCH).
 
 |    |   c0 |   c1 |   c2 |   c3 |   c4 |
 |:---|-----:|-----:|-----:|-----:|-----:|
-| r0 |   -0 |    0 |   -0 |    0 |    0 |
-| r1 |   -0 |   -0 |   -0 |    0 |    0 |
-| r2 |   -0 |   -0 |    0 |    0 |    0 |
-| r3 |   -0 |    0 |    0 |    0 |   -0 |
+| r0 |    0 |    0 |    0 |    0 |    0 |
+| r1 |    0 |    0 |    0 |    0 |    0 |
+| r2 |    0 |    0 |    0 |    0 |    0 |
+| r3 |    0 |    0 |    0 |    0 |    0 |
 | r4 |    0 |    0 |    0 |    0 |    0 |
 
 **Worked calculations for three representative output cells**
@@ -1152,7 +1156,9 @@ Neighborhood values:
 ```
 
 ```
-(1/9) x (212 + 207 + 151 + 212 + 210 + 178 + 213 + 211 + 185) = 1779/9 = 197.6667
+O(i,j) = [I(i-1,j-1) + I(i-1,j) + I(i-1,j+1) + I(i,j-1) + I(i,j) + I(i,j+1) + I(i+1,j-1) + I(i+1,j) + I(i+1,j+1)] / 9
+       = [212 + 207 + 151 + 212 + 210 + 178 + 213 + 211 + 185] / 9
+       = 1779 / 9 = 197.6667
 ```
 
 Manual result 197.6667, OpenCV result 197.6667.
@@ -1168,7 +1174,9 @@ Neighborhood values:
 ```
 
 ```
-(1/9) x (185 + 83 + 24 + 202 + 101 + 42 + 204 + 151 + 30) = 1022/9 = 113.5556
+O(i,j) = [I(i-1,j-1) + I(i-1,j) + I(i-1,j+1) + I(i,j-1) + I(i,j) + I(i,j+1) + I(i+1,j-1) + I(i+1,j) + I(i+1,j+1)] / 9
+       = [185 + 83 + 24 + 202 + 101 + 42 + 204 + 151 + 30] / 9
+       = 1022 / 9 = 113.5556
 ```
 
 Manual result 113.5556, OpenCV result 113.5556.
@@ -1184,12 +1192,14 @@ Neighborhood values:
 ```
 
 ```
-(1/9) x (30 + 18 + 22 + 36 + 36 + 38 + 87 + 36 + 36) = 339/9 = 37.6667
+O(i,j) = [I(i-1,j-1) + I(i-1,j) + I(i-1,j+1) + I(i,j-1) + I(i,j) + I(i,j+1) + I(i+1,j-1) + I(i+1,j) + I(i+1,j+1)] / 9
+       = [30 + 18 + 22 + 36 + 36 + 38 + 87 + 36 + 36] / 9
+       = 339 / 9 = 37.6667
 ```
 
 Manual result 37.6667, OpenCV result 37.6667.
 
-Maximum absolute difference: **0.0** (MATCH).
+Maximum absolute difference **0.0**, mean absolute difference **0.0**, exact matches **25/25** (**100.0 percent**), tolerance 1: **PASS**.
 
 ### OP08 - Gaussian filter (3x3)
 
@@ -1256,7 +1266,8 @@ Neighborhood values:
 ```
 
 ```
-(1/16) x [(1)(212) + (2)(207) + (1)(151) + (2)(212) + (4)(210) + (2)(178) + (1)(213) + (2)(211) + (1)(185)] = 3217/16 = 201.0625
+(1/16) x [(1)(212) + (2)(207) + (1)(151) + (2)(212) + (4)(210) + (2)(178) + (1)(213) + (2)(211) + (1)(185)]
+       = 3217/16 = 201.0625
 ```
 
 Manual result 201.0625, OpenCV result 201.0625.
@@ -1272,7 +1283,8 @@ Neighborhood values:
 ```
 
 ```
-(1/16) x [(1)(185) + (2)(83) + (1)(24) + (2)(202) + (4)(101) + (2)(42) + (1)(204) + (2)(151) + (1)(30)] = 1803/16 = 112.6875
+(1/16) x [(1)(185) + (2)(83) + (1)(24) + (2)(202) + (4)(101) + (2)(42) + (1)(204) + (2)(151) + (1)(30)]
+       = 1803/16 = 112.6875
 ```
 
 Manual result 112.6875, OpenCV result 112.6875.
@@ -1288,12 +1300,13 @@ Neighborhood values:
 ```
 
 ```
-(1/16) x [(1)(30) + (2)(18) + (1)(22) + (2)(36) + (4)(36) + (2)(38) + (1)(87) + (2)(36) + (1)(36)] = 575/16 = 35.9375
+(1/16) x [(1)(30) + (2)(18) + (1)(22) + (2)(36) + (4)(36) + (2)(38) + (1)(87) + (2)(36) + (1)(36)]
+       = 575/16 = 35.9375
 ```
 
 Manual result 35.9375, OpenCV result 35.9375.
 
-Maximum absolute difference: **0.0** (MATCH).
+Maximum absolute difference **0.0**, mean absolute difference **0.0**, exact matches **25/25** (**100.0 percent**), tolerance 1: **PASS**.
 
 ### OP09 - Median filter (3x3)
 
@@ -1352,7 +1365,8 @@ Neighborhood values:
 ```
 
 ```
-sorted(151, 178, 185, 207, 210, 211, 212, 212, 213) -> middle value = 210
+sorted values: 151, 178, 185, 207, 210, 211, 212, 212, 213
+       fifth of nine (the middle) = 210
 ```
 
 Manual result 210.0, OpenCV result 210.0.
@@ -1368,7 +1382,8 @@ Neighborhood values:
 ```
 
 ```
-sorted(24, 30, 42, 83, 101, 151, 185, 202, 204) -> middle value = 101
+sorted values: 24, 30, 42, 83, 101, 151, 185, 202, 204
+       fifth of nine (the middle) = 101
 ```
 
 Manual result 101.0, OpenCV result 101.0.
@@ -1384,12 +1399,13 @@ Neighborhood values:
 ```
 
 ```
-sorted(18, 22, 30, 36, 36, 36, 36, 38, 87) -> middle value = 36
+sorted values: 18, 22, 30, 36, 36, 36, 36, 38, 87
+       fifth of nine (the middle) = 36
 ```
 
 Manual result 36.0, OpenCV result 36.0.
 
-Maximum absolute difference: **0.0** (MATCH).
+Maximum absolute difference **0.0**, mean absolute difference **0.0**, exact matches **25/25** (**100.0 percent**), tolerance 0: **PASS**.
 
 ### OP10 - Sobel Gx
 
@@ -1456,7 +1472,8 @@ Neighborhood values:
 ```
 
 ```
-(-1)(212) + (0)(207) + (1)(151) + (-2)(212) + (0)(210) + (2)(178) + (-1)(213) + (0)(211) + (1)(185) = -157
+(-1)(212) + (0)(207) + (1)(151) + (-2)(212) + (0)(210) + (2)(178) + (-1)(213) + (0)(211) + (1)(185)
+       = -157
 ```
 
 Manual result -157.0, OpenCV result -157.0.
@@ -1472,7 +1489,8 @@ Neighborhood values:
 ```
 
 ```
-(-1)(185) + (0)(83) + (1)(24) + (-2)(202) + (0)(101) + (2)(42) + (-1)(204) + (0)(151) + (1)(30) = -655
+(-1)(185) + (0)(83) + (1)(24) + (-2)(202) + (0)(101) + (2)(42) + (-1)(204) + (0)(151) + (1)(30)
+       = -655
 ```
 
 Manual result -655.0, OpenCV result -655.0.
@@ -1488,12 +1506,13 @@ Neighborhood values:
 ```
 
 ```
-(-1)(30) + (0)(18) + (1)(22) + (-2)(36) + (0)(36) + (2)(38) + (-1)(87) + (0)(36) + (1)(36) = -55
+(-1)(30) + (0)(18) + (1)(22) + (-2)(36) + (0)(36) + (2)(38) + (-1)(87) + (0)(36) + (1)(36)
+       = -55
 ```
 
 Manual result -55.0, OpenCV result -55.0.
 
-Maximum absolute difference: **0.0** (MATCH).
+Maximum absolute difference **0.0**, mean absolute difference **0.0**, exact matches **25/25** (**100.0 percent**), tolerance 0: **PASS**.
 
 ### OP11 - Sobel Gy
 
@@ -1560,7 +1579,8 @@ Neighborhood values:
 ```
 
 ```
-(-1)(212) + (-2)(207) + (-1)(151) + (0)(212) + (0)(210) + (0)(178) + (1)(213) + (2)(211) + (1)(185) = 43
+(-1)(212) + (-2)(207) + (-1)(151) + (0)(212) + (0)(210) + (0)(178) + (1)(213) + (2)(211) + (1)(185)
+       = 43
 ```
 
 Manual result 43.0, OpenCV result 43.0.
@@ -1576,7 +1596,8 @@ Neighborhood values:
 ```
 
 ```
-(-1)(185) + (-2)(83) + (-1)(24) + (0)(202) + (0)(101) + (0)(42) + (1)(204) + (2)(151) + (1)(30) = 161
+(-1)(185) + (-2)(83) + (-1)(24) + (0)(202) + (0)(101) + (0)(42) + (1)(204) + (2)(151) + (1)(30)
+       = 161
 ```
 
 Manual result 161.0, OpenCV result 161.0.
@@ -1592,12 +1613,13 @@ Neighborhood values:
 ```
 
 ```
-(-1)(30) + (-2)(18) + (-1)(22) + (0)(36) + (0)(36) + (0)(38) + (1)(87) + (2)(36) + (1)(36) = 107
+(-1)(30) + (-2)(18) + (-1)(22) + (0)(36) + (0)(36) + (0)(38) + (1)(87) + (2)(36) + (1)(36)
+       = 107
 ```
 
 Manual result 107.0, OpenCV result 107.0.
 
-Maximum absolute difference: **0.0** (MATCH).
+Maximum absolute difference **0.0**, mean absolute difference **0.0**, exact matches **25/25** (**100.0 percent**), tolerance 0: **PASS**.
 
 ### OP12 - Sobel gradient magnitude
 
@@ -1650,7 +1672,8 @@ Maximum absolute difference: **0.0** (MATCH).
 Gx = -157.0, Gy = 43.0
 
 ```
-sqrt((-157)^2 + (43)^2) = sqrt(26498) = 162.7821
+G = sqrt(Gx^2 + Gy^2) = sqrt((-157)^2 + (43)^2)
+       = sqrt(26498) = 162.7821
 ```
 
 Manual result 162.7821, OpenCV result 162.7821.
@@ -1660,7 +1683,8 @@ Manual result 162.7821, OpenCV result 162.7821.
 Gx = -655.0, Gy = 161.0
 
 ```
-sqrt((-655)^2 + (161)^2) = sqrt(454946) = 674.4968
+G = sqrt(Gx^2 + Gy^2) = sqrt((-655)^2 + (161)^2)
+       = sqrt(454946) = 674.4968
 ```
 
 Manual result 674.4968, OpenCV result 674.4968.
@@ -1670,12 +1694,13 @@ Manual result 674.4968, OpenCV result 674.4968.
 Gx = -55.0, Gy = 107.0
 
 ```
-sqrt((-55)^2 + (107)^2) = sqrt(14474) = 120.3079
+G = sqrt(Gx^2 + Gy^2) = sqrt((-55)^2 + (107)^2)
+       = sqrt(14474) = 120.3079
 ```
 
 Manual result 120.3079, OpenCV result 120.3079.
 
-Maximum absolute difference: **0.0** (MATCH).
+Maximum absolute difference **0.0**, mean absolute difference **0.0**, exact matches **25/25** (**100.0 percent**), tolerance 1: **PASS**.
 
 ### OP13 - Erosion (3x3 ones)
 
@@ -1743,6 +1768,7 @@ Neighborhood values:
 
 ```
 min(255, 255, 255, 255, 255, 255, 255, 255, 255) = 255
+       (white only when every pixel under the kernel is white)
 ```
 
 Manual result 255.0, OpenCV result 255.0.
@@ -1759,6 +1785,7 @@ Neighborhood values:
 
 ```
 min(255, 0, 0, 255, 0, 0, 255, 255, 0) = 0
+       (white only when every pixel under the kernel is white)
 ```
 
 Manual result 0.0, OpenCV result 0.0.
@@ -1775,11 +1802,12 @@ Neighborhood values:
 
 ```
 min(0, 0, 0, 0, 0, 0, 0, 0, 0) = 0
+       (white only when every pixel under the kernel is white)
 ```
 
 Manual result 0.0, OpenCV result 0.0.
 
-Maximum absolute difference: **0.0** (MATCH).
+Maximum absolute difference **0.0**, mean absolute difference **0.0**, exact matches **25/25** (**100.0 percent**), tolerance 0: **PASS**.
 
 ### OP14 - Dilation (3x3 ones)
 
@@ -1847,6 +1875,7 @@ Neighborhood values:
 
 ```
 max(255, 255, 255, 255, 255, 255, 255, 255, 255) = 255
+       (white when at least one pixel under the kernel is white)
 ```
 
 Manual result 255.0, OpenCV result 255.0.
@@ -1863,6 +1892,7 @@ Neighborhood values:
 
 ```
 max(255, 0, 0, 255, 0, 0, 255, 255, 0) = 255
+       (white when at least one pixel under the kernel is white)
 ```
 
 Manual result 255.0, OpenCV result 255.0.
@@ -1879,12 +1909,53 @@ Neighborhood values:
 
 ```
 max(0, 0, 0, 0, 0, 0, 0, 0, 0) = 0
+       (white when at least one pixel under the kernel is white)
 ```
 
 Manual result 0.0, OpenCV result 0.0.
 
-Maximum absolute difference: **0.0** (MATCH).
+Maximum absolute difference **0.0**, mean absolute difference **0.0**, exact matches **25/25** (**100.0 percent**), tolerance 0: **PASS**.
 
-## 6. Conclusion
+## 6. Discussion
 
-Every operation applied through OpenCV corresponds to an arithmetic transformation of the underlying pixel matrix. The manual calculations reproduce the OpenCV results exactly, confirming that image processing is matrix processing.
+### Which Operation Produced the Largest Visual Change
+
+Binary thresholding produced the largest visual change. It collapses 256 intensity levels into two, discarding every gradient, texture, and shading cue in the image and leaving only a silhouette. The negative transformation changes every pixel value by a large amount as well, but it is a reversible one-to-one mapping that preserves all structure, so the subject remains fully recognizable. Canny is similarly drastic in appearance, but it is a detector rather than a transformation: it reports where edges are instead of producing a modified version of the image.
+
+### Which Filtering Method Best Reduced Noise
+
+The median filter is the most effective of the three at removing noise while keeping the image usable. Mean and Gaussian filtering are both convolutions, so an extreme outlier is averaged into its neighbors and spreads its error across the output rather than being eliminated. The median is a rank filter: an isolated extreme value sorts to one end of the nine-value list and is never selected as the middle element, so it is discarded outright. This is why the median filter is the standard choice for salt-and-pepper noise, while Gaussian filtering is preferred for smoothly distributed sensor noise.
+
+### Differences Among Mean, Gaussian, and Median Filtering
+
+The mean filter weights all nine neighbors equally at 1/9. It is the simplest to compute but blurs the most aggressively, because a distant corner pixel influences the result as much as the center pixel does. The Gaussian filter uses the weights `(1/16) * [[1,2,1],[2,4,2],[1,2,1]]`, giving the center four times the influence of a corner. It therefore smooths less and preserves edge position better, which is why it is the standard pre-processing step before edge detection. Both are linear convolutions and can produce output values that appear nowhere in the input. The median filter is fundamentally different: it performs no arithmetic at all, only sorting and selection, so every output value is one of the original input values. This makes it non-linear, edge-preserving, and immune to outliers, at the cost of being slower and of erasing fine texture detail that the linear filters would merely soften.
+
+### Differences Among Sobel, Laplacian, and Canny Edge Detection
+
+Sobel computes the first derivative in a single direction, so `Gx` responds to vertical edges and `Gy` to horizontal ones. Its output is signed and directional, and combining the two through `G = sqrt(Gx^2 + Gy^2)` gives an orientation-independent edge strength. The Laplacian computes the second derivative in both directions at once. It is not directional and responds to the rate of change of the gradient, which makes it sensitive to fine detail but also considerably noisier, since differentiating twice amplifies high-frequency noise. Both Sobel and the Laplacian produce a continuous-valued response in which every pixel receives some score. Canny is not a single operator but a full pipeline: Gaussian smoothing, Sobel gradients, non-maximum suppression to thin thick gradient ridges to single-pixel lines, and hysteresis thresholding with two thresholds to link strong edges to weak ones while rejecting isolated weak responses. Its output is therefore binary and sparse, giving clean connected contours rather than a gradient map.
+
+### Effects of Erosion and Dilation
+
+With a 3 x 3 kernel of ones and a white foreground, erosion keeps a pixel white only when all nine pixels under the kernel are white, which is the minimum over the neighborhood. White regions therefore shrink by roughly one pixel on every boundary, thin connections break, and small white specks vanish entirely. Dilation keeps a pixel white when at least one pixel under the kernel is white, which is the maximum over the neighborhood. White regions grow by about one pixel, small black holes fill, and nearby components merge. The two are duals rather than inverses, so applying one after the other does not restore the original: opening (erosion then dilation) removes small white noise while keeping the overall object size, and closing (dilation then erosion) fills small gaps while keeping the overall object size.
+
+### Effects of Nearest-Neighbor and Bilinear Interpolation
+
+This is covered quantitatively in section 4.2. In summary, nearest neighbor copies the closest source pixel and performs no arithmetic, so it introduces no new intensity values and keeps edges hard, at the cost of visible blockiness where each source pixel becomes a 2 x 2 square. Bilinear interpolation averages the four nearest source pixels, which creates intermediate values that were never present in the source and yields smoother gradients but softer edges. Measured against the original image, the bilinear result was closer on both mean and maximum absolute difference.
+
+### Problems Caused by Rounding, Clipping, Data Types, and Image Borders
+
+**Rounding.** Filter weights such as 1/9 and 1/16 are not exactly representable in binary floating point, and the order in which the nine products are accumulated affects the last few bits of the result. This produced the roughly 3e-14 residue seen in the mean filter comparison. It also matters that OpenCV rounds when converting back to 8-bit while a plain NumPy cast truncates, a one-level discrepancy that appeared in the contrast operation until the manual calculation was changed to round explicitly.
+
+**Clipping.** Brightness and contrast adjustment can push values outside the 0 to 255 range. Without clipping, an unsigned 8-bit result wraps around, so a bright pixel at 240 plus 40 becomes 24 and appears black. Both operations must clip rather than allow overflow, which means they are not reversible: information above 255 is permanently lost.
+
+**Data types.** Sobel and Laplacian responses are signed, and an edge running light to dark produces a negative value. Storing these directly in a `uint8` matrix clips every negative response to zero and silently discards half of the detected edges. Both were therefore computed with `cv2.CV_64F`, with a separately scaled copy produced only for the PNG previews.
+
+**Image borders.** A 3 x 3 neighborhood is undefined at the outermost row and column, so OpenCV invents values there according to a border mode, reflection by default. Manual calculation has no such convention, so comparing border pixels would measure the padding rule rather than the arithmetic. This is why the manual verification compares only the central 5 x 5 region of the 7 x 7 patch, where every contributing pixel is real data. The same effect appears in contour analysis: because the thresholded white region touches all four borders, `RETR_EXTERNAL` returned a single contour tracing the image frame, and `RETR_LIST` was needed to recover meaningful interior contours.
+
+## 7. What I Learned
+
+The central lesson is that a digital image is a numerical matrix, and that every OpenCV function is a specific, reproducible piece of arithmetic on that matrix. Nothing in this assignment required trusting OpenCV as a black box: each of the fourteen verified operations was reproduced from its defining equation using only indexing, multiplication, addition, sorting, and square roots, and every one matched the library output in 100 percent of cells.
+
+Working through the operations by hand made the structure behind them visible. Grayscale conversion is a weighted sum whose coefficients encode human visual sensitivity. Spatial filtering is correlation with a kernel, and the kernel weights alone determine whether the result is a blur, an edge detector, or a sharpener. Rank filters such as the median and the morphological operators are not convolutions at all but selections from a sorted neighborhood, which is precisely why they behave so differently at edges and in the presence of outliers.
+
+Equally important was learning where the mathematics meets implementation reality. The differences that did arise during development came not from the equations but from representation: rounding versus truncation, signed versus unsigned storage, clipping at the ends of the range, and the invented values at image borders. Reproducing a library function correctly means matching its numerical conventions as well as its formula.

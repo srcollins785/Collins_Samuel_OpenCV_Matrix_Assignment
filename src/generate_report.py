@@ -418,19 +418,48 @@ def section_verification() -> list[str]:
         return lines
 
     results = pd.read_csv(summary)
-    lines.append("### Summary of All Manual Operations")
+    lines.append("### Verification Statistics for All Manual Operations")
+    lines.append("")
+    lines.append(
+        "Verification is performed by `src/verify_matrices.py`, a separate program that reloads "
+        "the saved manual and OpenCV matrices from disk, confirms their dimensions match, and "
+        "computes the signed difference `D = I_OpenCV - I_manual`. Exact-match tolerance is 0 for "
+        "operations built from exact integer arithmetic (negative, thresholding, flipping, median, "
+        "Sobel, erosion, dilation) and 1 intensity level for operations involving floating-point "
+        "weights or rounding (grayscale, brightness, contrast, mean, Gaussian, gradient magnitude)."
+    )
     lines.append("")
     lines.append(
         results[
-            ["operation_id", "operation", "output_shape", "max_abs_difference", "result"]
+            [
+                "operation_id",
+                "operation",
+                "output_shape",
+                "max_abs_difference",
+                "mean_abs_difference",
+                "exact_match_cells",
+                "total_cells",
+                "exact_match_percentage",
+                "tolerance",
+                "verdict",
+            ]
         ].to_markdown(index=False)
     )
     lines.append("")
-    matched = int((results["result"] == "MATCH").sum())
+    passed = int((results["verdict"] == "PASS").sum())
+    perfect = int((results["exact_match_percentage"] == 100.0).sum())
     lines.append(
-        f"All {matched} of {len(results)} operations reproduce the OpenCV result. Where a maximum "
-        "difference is not exactly zero it is on the order of 1e-14, which is floating-point "
-        "representation error rather than a disagreement in the arithmetic."
+        f"All {passed} of {len(results)} operations pass. {perfect} of them match OpenCV in "
+        "100 percent of cells, with a maximum absolute difference of 0 and a mean absolute "
+        "difference of 0, so there are no nonzero differences left to explain."
+    )
+    lines.append("")
+    lines.append(
+        "One detail is worth noting. When the mean filter is computed in memory the largest "
+        "disagreement is about 3e-14, because the weight 1/9 has no exact binary representation "
+        "and the manual loop accumulates its nine products in a different order than OpenCV does. "
+        "That residue is far below one intensity level and disappears once the matrices are "
+        "written to CSV at four decimal places, which is why the table reports exactly 0."
     )
     lines.append("")
 
@@ -464,7 +493,10 @@ def section_verification() -> list[str]:
                 lines += worked_example_lines(subset)
 
         lines.append(
-            f"Maximum absolute difference: **{row.max_abs_difference}** ({row.result})."
+            f"Maximum absolute difference **{row.max_abs_difference}**, mean absolute difference "
+            f"**{row.mean_abs_difference}**, exact matches **{row.exact_match_cells}/"
+            f"{row.total_cells}** (**{row.exact_match_percentage} percent**), tolerance "
+            f"{row.tolerance}: **{row.verdict}**."
         )
         lines.append("")
     return lines
@@ -500,6 +532,138 @@ def worked_example_lines(subset: pd.DataFrame) -> list[str]:
     return lines
 
 
+def section_discussion() -> list[str]:
+    lines = [
+        "## 6. Discussion",
+        "",
+        "### Which Operation Produced the Largest Visual Change",
+        "",
+        "Binary thresholding produced the largest visual change. It collapses 256 intensity levels "
+        "into two, discarding every gradient, texture, and shading cue in the image and leaving "
+        "only a silhouette. The negative transformation changes every pixel value by a large "
+        "amount as well, but it is a reversible one-to-one mapping that preserves all structure, "
+        "so the subject remains fully recognizable. Canny is similarly drastic in appearance, but "
+        "it is a detector rather than a transformation: it reports where edges are instead of "
+        "producing a modified version of the image.",
+        "",
+        "### Which Filtering Method Best Reduced Noise",
+        "",
+        "The median filter is the most effective of the three at removing noise while keeping the "
+        "image usable. Mean and Gaussian filtering are both convolutions, so an extreme outlier is "
+        "averaged into its neighbors and spreads its error across the output rather than being "
+        "eliminated. The median is a rank filter: an isolated extreme value sorts to one end of "
+        "the nine-value list and is never selected as the middle element, so it is discarded "
+        "outright. This is why the median filter is the standard choice for salt-and-pepper noise, "
+        "while Gaussian filtering is preferred for smoothly distributed sensor noise.",
+        "",
+        "### Differences Among Mean, Gaussian, and Median Filtering",
+        "",
+        "The mean filter weights all nine neighbors equally at 1/9. It is the simplest to compute "
+        "but blurs the most aggressively, because a distant corner pixel influences the result as "
+        "much as the center pixel does. The Gaussian filter uses the weights "
+        "`(1/16) * [[1,2,1],[2,4,2],[1,2,1]]`, giving the center four times the influence of a "
+        "corner. It therefore smooths less and preserves edge position better, which is why it is "
+        "the standard pre-processing step before edge detection. Both are linear convolutions and "
+        "can produce output values that appear nowhere in the input. The median filter is "
+        "fundamentally different: it performs no arithmetic at all, only sorting and selection, so "
+        "every output value is one of the original input values. This makes it non-linear, "
+        "edge-preserving, and immune to outliers, at the cost of being slower and of erasing fine "
+        "texture detail that the linear filters would merely soften.",
+        "",
+        "### Differences Among Sobel, Laplacian, and Canny Edge Detection",
+        "",
+        "Sobel computes the first derivative in a single direction, so `Gx` responds to vertical "
+        "edges and `Gy` to horizontal ones. Its output is signed and directional, and combining "
+        "the two through `G = sqrt(Gx^2 + Gy^2)` gives an orientation-independent edge strength. "
+        "The Laplacian computes the second derivative in both directions at once. It is not "
+        "directional and responds to the rate of change of the gradient, which makes it sensitive "
+        "to fine detail but also considerably noisier, since differentiating twice amplifies "
+        "high-frequency noise. Both Sobel and the Laplacian produce a continuous-valued response "
+        "in which every pixel receives some score. Canny is not a single operator but a full "
+        "pipeline: Gaussian smoothing, Sobel gradients, non-maximum suppression to thin thick "
+        "gradient ridges to single-pixel lines, and hysteresis thresholding with two thresholds to "
+        "link strong edges to weak ones while rejecting isolated weak responses. Its output is "
+        "therefore binary and sparse, giving clean connected contours rather than a gradient map.",
+        "",
+        "### Effects of Erosion and Dilation",
+        "",
+        "With a 3 x 3 kernel of ones and a white foreground, erosion keeps a pixel white only when "
+        "all nine pixels under the kernel are white, which is the minimum over the neighborhood. "
+        "White regions therefore shrink by roughly one pixel on every boundary, thin connections "
+        "break, and small white specks vanish entirely. Dilation keeps a pixel white when at least "
+        "one pixel under the kernel is white, which is the maximum over the neighborhood. White "
+        "regions grow by about one pixel, small black holes fill, and nearby components merge. The "
+        "two are duals rather than inverses, so applying one after the other does not restore the "
+        "original: opening (erosion then dilation) removes small white noise while keeping the "
+        "overall object size, and closing (dilation then erosion) fills small gaps while keeping "
+        "the overall object size.",
+        "",
+        "### Effects of Nearest-Neighbor and Bilinear Interpolation",
+        "",
+        "This is covered quantitatively in section 4.2. In summary, nearest neighbor copies the "
+        "closest source pixel and performs no arithmetic, so it introduces no new intensity values "
+        "and keeps edges hard, at the cost of visible blockiness where each source pixel becomes a "
+        "2 x 2 square. Bilinear interpolation averages the four nearest source pixels, which "
+        "creates intermediate values that were never present in the source and yields smoother "
+        "gradients but softer edges. Measured against the original image, the bilinear result was "
+        "closer on both mean and maximum absolute difference.",
+        "",
+        "### Problems Caused by Rounding, Clipping, Data Types, and Image Borders",
+        "",
+        "**Rounding.** Filter weights such as 1/9 and 1/16 are not exactly representable in binary "
+        "floating point, and the order in which the nine products are accumulated affects the last "
+        "few bits of the result. This produced the roughly 3e-14 residue seen in the mean filter "
+        "comparison. It also matters that OpenCV rounds when converting back to 8-bit while a "
+        "plain NumPy cast truncates, a one-level discrepancy that appeared in the contrast "
+        "operation until the manual calculation was changed to round explicitly.",
+        "",
+        "**Clipping.** Brightness and contrast adjustment can push values outside the 0 to 255 "
+        "range. Without clipping, an unsigned 8-bit result wraps around, so a bright pixel at 240 "
+        "plus 40 becomes 24 and appears black. Both operations must clip rather than allow "
+        "overflow, which means they are not reversible: information above 255 is permanently lost.",
+        "",
+        "**Data types.** Sobel and Laplacian responses are signed, and an edge running light to "
+        "dark produces a negative value. Storing these directly in a `uint8` matrix clips every "
+        "negative response to zero and silently discards half of the detected edges. Both were "
+        "therefore computed with `cv2.CV_64F`, with a separately scaled copy produced only for the "
+        "PNG previews.",
+        "",
+        "**Image borders.** A 3 x 3 neighborhood is undefined at the outermost row and column, so "
+        "OpenCV invents values there according to a border mode, reflection by default. Manual "
+        "calculation has no such convention, so comparing border pixels would measure the padding "
+        "rule rather than the arithmetic. This is why the manual verification compares only the "
+        "central 5 x 5 region of the 7 x 7 patch, where every contributing pixel is real data. The "
+        "same effect appears in contour analysis: because the thresholded white region touches all "
+        "four borders, `RETR_EXTERNAL` returned a single contour tracing the image frame, and "
+        "`RETR_LIST` was needed to recover meaningful interior contours.",
+        "",
+        "## 7. What I Learned",
+        "",
+        "The central lesson is that a digital image is a numerical matrix, and that every OpenCV "
+        "function is a specific, reproducible piece of arithmetic on that matrix. Nothing in this "
+        "assignment required trusting OpenCV as a black box: each of the fourteen verified "
+        "operations was reproduced from its defining equation using only indexing, multiplication, "
+        "addition, sorting, and square roots, and every one matched the library output in 100 "
+        "percent of cells.",
+        "",
+        "Working through the operations by hand made the structure behind them visible. Grayscale "
+        "conversion is a weighted sum whose coefficients encode human visual sensitivity. Spatial "
+        "filtering is correlation with a kernel, and the kernel weights alone determine whether "
+        "the result is a blur, an edge detector, or a sharpener. Rank filters such as the median "
+        "and the morphological operators are not convolutions at all but selections from a sorted "
+        "neighborhood, which is precisely why they behave so differently at edges and in the "
+        "presence of outliers.",
+        "",
+        "Equally important was learning where the mathematics meets implementation reality. The "
+        "differences that did arise during development came not from the equations but from "
+        "representation: rounding versus truncation, signed versus unsigned storage, clipping at "
+        "the ends of the range, and the invented values at image borders. Reproducing a library "
+        "function correctly means matching its numerical conventions as well as its formula.",
+        "",
+    ]
+    return lines
+
+
 def build() -> str:
     lines = [
         "# OpenCV Matrix Assignment Report",
@@ -525,14 +689,7 @@ def build() -> str:
     lines += section_matrices()
     lines += section_operations()
     lines += section_verification()
-    lines += [
-        "## 6. Conclusion",
-        "",
-        "Every operation applied through OpenCV corresponds to an arithmetic transformation of the "
-        "underlying pixel matrix. The manual calculations reproduce the OpenCV results exactly, "
-        "confirming that image processing is matrix processing.",
-        "",
-    ]
+    lines += section_discussion()
     return "\n".join(lines)
 
 

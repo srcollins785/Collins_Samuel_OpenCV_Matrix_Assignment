@@ -8,6 +8,7 @@ SRC = Path(__file__).resolve().parent
 STEPS = [
     "prepare_image.py",
     "opencv_operations.py",
+    "manual_calculations.py",
     "verify_matrices.py",
     "generate_report.py",
     "build_report_pdf.py",

@@ -24,6 +24,8 @@ def load_image() -> np.ndarray:
     image = cv2.imread(str(INPUT_IMAGE), cv2.IMREAD_COLOR)
     if image is None:
         raise FileNotFoundError(f"Could not read {INPUT_IMAGE}. Run prepare_image.py first.")
+    if image.shape[:2] != (200, 200):
+        raise ValueError(f"Working image is {image.shape[:2]}, expected (200, 200).")
     return image
 
 
@@ -155,7 +157,10 @@ def geometric(gray: np.ndarray) -> None:
 
 def spatial_filtering(gray: np.ndarray) -> None:
     save_result(cv2.filter2D(gray, -1, MEAN_KERNEL), "filter_mean_3x3")
-    save_result(cv2.filter2D(gray, -1, GAUSSIAN_KERNEL), "filter_gaussian_3x3")
+    gaussian = cv2.filter2D(gray, -1, GAUSSIAN_KERNEL)
+    save_result(gaussian, "filter_gaussian_3x3")
+    # Also emitted under the name used in the assignment's required repository structure.
+    save_result(gaussian, "gaussian_blur")
     save_result(cv2.medianBlur(gray, 3), "filter_median_3x3")
 
 
