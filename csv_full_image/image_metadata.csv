@@ -1,0 +1,8 @@
+property,value
+original_height,2316
+original_width,2316
+original_channels,3
+resized_height,200
+resized_width,200
+resized_channels,3
+dtype,uint8
