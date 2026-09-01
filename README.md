@@ -5,21 +5,68 @@ Clark Atlanta University · Instructor: Dr. Kishor Gupta
 Samuel Collins, Ph.D. Student, Department of Cyber-Physical Systems
 `samuel.collins@students.cau.edu`
 
+## Full Technical Report
+
+> **The complete technical report is [report/OpenCV_Matrix_Assignment_Report.md](report/OpenCV_Matrix_Assignment_Report.md)**
+> — readable directly in the browser, no download required.
+> A PDF export is also provided at [report/OpenCV_Matrix_Assignment_Report.pdf](report/OpenCV_Matrix_Assignment_Report.pdf).
+
+The report contains, for **every** operation, the input and output images, the OpenCV function and
+its parameters, the output matrix dimensions, and an interpretation of the result. For every manual
+operation it contains the input patch, the kernel or formula, three fully substituted numerical
+calculations, and the manual, OpenCV, and difference matrices. This README summarizes that material;
+the report is the authoritative source.
+
+| Report section | Contents |
+| --- | --- |
+| [1. Objective](report/OpenCV_Matrix_Assignment_Report.md#1-objective) | Purpose of the assignment |
+| [2. Image Acquisition and Preparation](report/OpenCV_Matrix_Assignment_Report.md#2-image-acquisition-and-preparation) | The three source images, properties, BGR ordering |
+| [3. The Image as a Numerical Matrix](report/OpenCV_Matrix_Assignment_Report.md#3-the-image-as-a-numerical-matrix) | Channel matrices and grayscale derivation |
+| [4. OpenCV Operations](report/OpenCV_Matrix_Assignment_Report.md#4-opencv-operations) | All Part B operations, 4.1 through 4.6 |
+| [5. Manual Matrix Calculations](report/OpenCV_Matrix_Assignment_Report.md#5-manual-matrix-calculations) | All 14 manual operations with worked arithmetic |
+| [6. Discussion](report/OpenCV_Matrix_Assignment_Report.md#6-discussion) | Required comparison and analysis topics |
+| [7. What I Learned](report/OpenCV_Matrix_Assignment_Report.md#7-what-i-learned) | Summary of findings |
+
 ## Project Purpose
 
 This project demonstrates that a digital image is a numerical matrix, not only a visual object.
 A photograph captured with a mobile phone is converted into a 200 × 200 image, its pixel values are
 exported into CSV matrix files, a set of image-processing operations is applied with OpenCV, and
-fourteen of those operations are then reproduced by hand and verified against the OpenCV results
-cell by cell.
+fourteen of those operations are then reproduced independently and verified against the OpenCV
+results cell by cell.
 
-The full technical report is [report/OpenCV_Matrix_Assignment_Report.pdf](report/OpenCV_Matrix_Assignment_Report.pdf),
-generated automatically from the pipeline outputs.
+### The Image at Three Stages
+
+| Original mobile-camera photograph | Cropped square image | Final 200 × 200 image |
+| :---: | :---: | :---: |
+| ![Original photograph](input/image_original_not_cropped.jpg) | ![Cropped square](input/image_original.jpg) | ![Final working image](input/image_200x200.png) |
+| 2316 × 3088 | 2316 × 2316 | 200 × 200 |
+
+### Representative Results
+
+| Grayscale | Negative | Threshold | Histogram equalized |
+| :---: | :---: | :---: | :---: |
+| ![Grayscale](output_images/grayscale.png) | ![Negative](output_images/negative.png) | ![Threshold](output_images/threshold.png) | ![Equalized](output_images/histogram_equalized.png) |
+
+| Mean 3×3 | Gaussian 3×3 | Median 3×3 | Canny |
+| :---: | :---: | :---: | :---: |
+| ![Mean](output_images/filter_mean_3x3.png) | ![Gaussian](output_images/filter_gaussian_3x3.png) | ![Median](output_images/filter_median_3x3.png) | ![Canny](output_images/canny.png) |
+
+| Sobel Gx | Sobel Gy | Gradient magnitude | Laplacian |
+| :---: | :---: | :---: | :---: |
+| ![Sobel Gx](output_images/sobel_x.png) | ![Sobel Gy](output_images/sobel_y.png) | ![Magnitude](output_images/sobel_magnitude.png) | ![Laplacian](output_images/laplacian.png) |
+
+| Erosion | Dilation | Contour mask | Contours drawn |
+| :---: | :---: | :---: | :---: |
+| ![Erosion](output_images/morph_erosion.png) | ![Dilation](output_images/morph_dilation.png) | ![Contour mask](output_images/contour_mask.png) | ![Contours](output_images/contours_drawn.png) |
+
+Every operation's image, matrix, and interpretation appears in
+[section 4 of the report](report/OpenCV_Matrix_Assignment_Report.md#4-opencv-operations).
 
 ## Requirements
 
-- **Python 3.10 or newer** (developed and tested on Python 3.14)
-- Packages, pinned in [requirements.txt](requirements.txt):
+- **Python 3.10 or newer** (developed and tested on Python 3.14.3)
+- Packages, listed in [requirements.txt](requirements.txt):
 
 | Package | Purpose |
 | --- | --- |
@@ -266,7 +313,10 @@ O(i,j) = [ I(i-1,j-1) + I(i-1,j) + I(i-1,j+1)
          + I(i+1,j-1) + I(i+1,j) + I(i+1,j+1) ] / 9
 ```
 
-Three fully substituted calculations are shown for every neighborhood operation in the report and in
+Three fully substituted calculations are shown for every neighborhood operation in
+[section 5 of the report](report/OpenCV_Matrix_Assignment_Report.md#5-manual-matrix-calculations),
+which also prints the input patch, the kernel, and the manual, OpenCV, and difference matrices for
+each of the fourteen operations. The same data is in
 `csv_manual_calculations/manual_worked_examples.csv`.
 
 ### Verification Statistics
@@ -302,7 +352,8 @@ below one intensity level and disappears once matrices are written to CSV at fou
 
 ## Discussion
 
-The report contains the full discussion. In brief:
+The [full discussion is in section 6 of the report](report/OpenCV_Matrix_Assignment_Report.md#6-discussion).
+In brief:
 
 - **Largest visual change:** binary thresholding, which discards 254 of 256 intensity levels.
 - **Best noise reduction:** the median filter, because a rank filter discards outliers outright
